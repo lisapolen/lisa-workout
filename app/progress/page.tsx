@@ -9,6 +9,12 @@ import { Exercise, CardioLog, VO2maxLog } from '@/lib/types'
 
 type Tab = 'strength' | 'cardio' | 'vo2max'
 
+const VO2_MIN = 23
+const VO2_MAX = 40
+function vo2Pct(value: number): number {
+  return Math.max(0, Math.min(100, ((value - VO2_MIN) / (VO2_MAX - VO2_MIN)) * 100))
+}
+
 const CARDIO_COLORS: Record<string, string> = {
   interval_run: '#f59e0b',
   sustained_run: '#3b82f6',
@@ -225,10 +231,15 @@ function VO2maxTab() {
           <div className="w-full bg-zinc-800 rounded-full h-3 mb-1">
             <div
               className="bg-amber-400 h-3 rounded-full"
-              style={{ width: `${Math.min(100, (Number(latest.value) / 34) * 100).toFixed(1)}%` }}
+              style={{ width: `${vo2Pct(Number(latest.value)).toFixed(1)}%` }}
             />
           </div>
-          <p className="text-zinc-500 text-xs mt-1">
+          <div className="flex justify-between mt-1 mb-2">
+            <span className="text-xs text-zinc-500">23 (low)</span>
+            <span className="text-xs text-amber-400">Target: 34</span>
+            <span className="text-xs text-zinc-500">40 (athlete)</span>
+          </div>
+          <p className="text-zinc-500 text-xs">
             {(34 - Number(latest.value)).toFixed(1)} points to goal
             &mdash; Note: Apple Watch may underestimate due to asthma affecting HR at pace
           </p>

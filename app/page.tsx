@@ -18,6 +18,13 @@ const BLOCK_LABEL: Record<string, string> = {
   recovery: 'Recovery',
 }
 
+// VO2max clinical scale
+const VO2_MIN = 23
+const VO2_MAX = 40
+function vo2Pct(value: number): number {
+  return Math.max(0, Math.min(100, ((value - VO2_MIN) / (VO2_MAX - VO2_MIN)) * 100))
+}
+
 function relativeDate(iso: string) {
   const d = new Date(iso)
   const today = new Date()
@@ -28,24 +35,51 @@ function relativeDate(iso: string) {
   return `${diff} days ago`
 }
 
+interface LastSessionInfo {
+  date: string
+  block_name: string
+  exercises: { name: string; weight: number | null; reps: number | null }[]
+}
+
 export default function HomePage() {
   const [blocks, setBlocks] = useState<Block[]>([])
   const [vo2max, setVo2max] = useState<VO2maxLog | null>(null)
-  const [lastSession, setLastSession] = useState<{ date: string; block_name: string } | null>(null)
+  const [lastSession, setLastSession] = useState<LastSessionInfo | null | false>(undefined as any)
 
   useEffect(() => {
     async function load() {
       const [{ data: blocksData }, { data: vo2Data }, { data: sessionData }] = await Promise.all([
         supabase.from('blocks').select('*').order('sort_order'),
         supabase.from('vo2max_log').select('*').order('date', { ascending: false }).limit(1),
-        supabase.from('sessions').select('date, block_id, blocks(name)').order('created_at', { ascending: false }).limit(1),
+        supabase.from('sessions').select('id, date, blocks(name)').order('created_at', { ascending: false }).limit(1).maybeSingle(),
       ])
+
       if (blocksData) setBlocks(blocksData)
       if (vo2Data?.[0]) setVo2max(vo2Data[0])
-      if (sessionData?.[0]) {
-        const s = sessionData[0] as any
-        setLastSession({ date: s.date, block_name: s.blocks?.name ?? 'Workout' })
+
+      if (!sessionData) {
+        setLastSession(false)
+        return
       }
+
+      const s = sessionData as any
+      const { data: setsData } = await supabase
+        .from('sets_log')
+        .select('exercise_id, weight, reps, exercises(name)')
+        .eq('session_id', s.id)
+        .order('set_number')
+
+      const seen = new Set<number>()
+      const exercises: LastSessionInfo['exercises'] = []
+      for (const row of setsData ?? []) {
+        const r = row as any
+        if (!seen.has(r.exercise_id) && exercises.length < 3) {
+          seen.add(r.exercise_id)
+          exercises.push({ name: r.exercises?.name ?? '', weight: r.weight, reps: r.reps })
+        }
+      }
+
+      setLastSession({ date: s.date, block_name: s.blocks?.name ?? 'Workout', exercises })
     }
     load()
   }, [])
@@ -91,25 +125,44 @@ export default function HomePage() {
           </div>
           <div className="w-full bg-zinc-800 rounded-full h-3 mb-1">
             <div
-              className="bg-amber-400 h-3 rounded-full"
-              style={{ width: `${Math.min(100, (Number(vo2max.value) / 34) * 100).toFixed(1)}%` }}
+              className="bg-amber-400 h-3 rounded-full transition-all"
+              style={{ width: `${vo2Pct(Number(vo2max.value)).toFixed(1)}%` }}
             />
           </div>
-          <div className="flex justify-between">
-            <span className="text-xs text-zinc-600">0</span>
+          <div className="flex justify-between mt-1">
+            <span className="text-xs text-zinc-500">23 (low)</span>
             <span className="text-xs text-amber-400">Target: 34</span>
+            <span className="text-xs text-zinc-500">40 (athlete)</span>
           </div>
         </div>
       )}
 
       {/* Last session */}
-      {lastSession && (
+      {lastSession === false ? (
+        <div className="bg-zinc-900 rounded-2xl p-5 border border-zinc-800 text-center">
+          <p className="text-zinc-400">No sessions logged yet &mdash; get started!</p>
+        </div>
+      ) : lastSession ? (
         <div className="bg-zinc-900 rounded-2xl p-4 border border-zinc-800">
           <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Last session</p>
-          <p className="text-lg font-semibold">{lastSession.block_name}</p>
-          <p className="text-zinc-400 text-sm">{relativeDate(lastSession.date)}</p>
+          <div className="flex items-baseline justify-between mb-3">
+            <p className="text-lg font-semibold">{lastSession.block_name}</p>
+            <p className="text-zinc-400 text-sm">{relativeDate(lastSession.date)}</p>
+          </div>
+          {lastSession.exercises.length > 0 && (
+            <div className="space-y-1.5">
+              {lastSession.exercises.map((ex, i) => (
+                <div key={i} className="flex items-center justify-between">
+                  <span className="text-zinc-300 text-sm">{ex.name}</span>
+                  <span className="text-amber-400 text-sm font-semibold">
+                    {ex.weight != null ? `${ex.weight} lbs` : 'BW'} &times; {ex.reps}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      ) : null}
     </div>
   )
 }

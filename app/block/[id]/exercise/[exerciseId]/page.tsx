@@ -5,6 +5,66 @@ import { supabase } from '@/lib/supabase'
 import { Exercise, SetLog } from '@/lib/types'
 import NeckSafetyModal from '@/components/NeckSafetyModal'
 
+function parseTargetReps(repsStr: string | null): number {
+  if (!repsStr) return 0
+  const match = repsStr.match(/\d+/)
+  return match ? parseInt(match[0]) : 0
+}
+
+function parseStartingWeight(sw: string | null): string {
+  if (!sw || sw === 'Bodyweight') return ''
+  const match = sw.match(/[\d.]+/)
+  return match ? match[0] : ''
+}
+
+interface StepperProps {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  step: number
+  min?: number
+  unit?: string
+}
+
+function Stepper({ label, value, onChange, step, min = 0, unit }: StepperProps) {
+  function adjust(delta: number) {
+    const current = parseFloat(value) || 0
+    const next = Math.max(min, Math.round((current + delta) * 100) / 100)
+    onChange(String(next))
+  }
+
+  return (
+    <div>
+      <label className="text-zinc-400 text-sm mb-2 block">
+        {label}{unit && <span className="text-zinc-600 ml-1">({unit})</span>}
+      </label>
+      <div className="flex items-stretch gap-2">
+        <button
+          type="button"
+          onPointerDown={() => adjust(-step)}
+          className="w-16 bg-zinc-800 rounded-2xl text-3xl font-bold text-white flex items-center justify-center border border-zinc-700 active:bg-zinc-700 select-none"
+        >
+          -
+        </button>
+        <input
+          type="number"
+          inputMode="decimal"
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          className="flex-1 bg-zinc-800 rounded-xl text-4xl font-bold text-center py-4 border-2 border-zinc-700 focus:border-amber-400 outline-none"
+        />
+        <button
+          type="button"
+          onPointerDown={() => adjust(step)}
+          className="w-16 bg-zinc-800 rounded-2xl text-3xl font-bold text-white flex items-center justify-center border border-zinc-700 active:bg-zinc-700 select-none"
+        >
+          +
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function SetLoggerPage() {
   const params = useParams()
   const router = useRouter()
@@ -21,6 +81,7 @@ export default function SetLoggerPage() {
   const [saving, setSaving] = useState(false)
   const [showNeck, setShowNeck] = useState(false)
   const [error, setError] = useState('')
+  const [showOverloadPrompt, setShowOverloadPrompt] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -32,6 +93,10 @@ export default function SetLoggerPage() {
       if (!ex) return
       setExercise(ex)
 
+      // Set default reps from target
+      const targetReps = parseTargetReps(ex.reps)
+      if (targetReps > 0) setReps(String(targetReps))
+
       // Check if upper body block
       const { data: blk } = await supabase
         .from('blocks')
@@ -40,17 +105,24 @@ export default function SetLoggerPage() {
         .single()
       if (blk?.name === 'Upper Body') setIsUpperBody(true)
 
-      // Last logged weight
+      // Last logged weight (or starting weight as fallback)
       const { data: lastSet } = await supabase
         .from('sets_log')
         .select('weight')
         .eq('exercise_id', exerciseId)
+        .not('weight', 'is', null)
         .order('completed_at', { ascending: false })
         .limit(1)
         .maybeSingle()
 
-      setLastWeight(lastSet?.weight ?? null)
-      if (lastSet?.weight != null) setWeight(String(lastSet.weight))
+      if (lastSet?.weight != null) {
+        setLastWeight(lastSet.weight)
+        setWeight(String(lastSet.weight))
+      } else {
+        setLastWeight(null)
+        const startingDefault = parseStartingWeight(ex.starting_weight)
+        if (startingDefault) setWeight(startingDefault)
+      }
     }
     load()
   }, [exerciseId])
@@ -72,6 +144,48 @@ export default function SetLoggerPage() {
     return data.id
   }
 
+  async function checkOverload(loggedWeight: number) {
+    if (!exercise) return
+    const targetReps = parseTargetReps(exercise.reps)
+    if (targetReps === 0) return
+
+    const dismissKey = `overload_dismissed_${exerciseId}_${loggedWeight}`
+    if (localStorage.getItem(dismissKey)) return
+
+    const today = new Date().toISOString().split('T')[0]
+    const currentSessionKey = `session_${blockId}_${today}`
+    const currentSessionId = localStorage.getItem(currentSessionKey)
+
+    const { data: allSets } = await supabase
+      .from('sets_log')
+      .select('session_id, weight, reps')
+      .eq('exercise_id', exerciseId)
+      .not('weight', 'is', null)
+      .order('completed_at', { ascending: false })
+      .limit(100)
+
+    if (!allSets) return
+
+    // Group by session, excluding current
+    const prevSessions: Record<number, { weight: number; reps: number | null }[]> = {}
+    for (const s of allSets) {
+      if (String(s.session_id) === currentSessionId) continue
+      if (!prevSessions[s.session_id]) prevSessions[s.session_id] = []
+      prevSessions[s.session_id].push({ weight: Number(s.weight), reps: s.reps })
+    }
+
+    const prevIds = Object.keys(prevSessions)
+    if (prevIds.length < 2) return
+
+    // Check last 2 sessions: all sets at same weight, all reps >= target
+    const qualified = prevIds.slice(0, 2).every(sid => {
+      const sets = prevSessions[Number(sid)]
+      return sets.every(s => s.weight === loggedWeight && (s.reps ?? 0) >= targetReps)
+    })
+
+    if (qualified) setShowOverloadPrompt(true)
+  }
+
   async function logSet() {
     if (!exercise || saving) return
     const isBodyweight = exercise.starting_weight === 'Bodyweight'
@@ -82,13 +196,14 @@ export default function SetLoggerPage() {
     setError('')
     try {
       const sessionId = await getOrCreateSession()
+      const loggedWeight = isBodyweight ? null : Number(weight)
       const { data, error: insertError } = await supabase
         .from('sets_log')
         .insert({
           session_id: sessionId,
           exercise_id: exerciseId,
           set_number: currentSet,
-          weight: isBodyweight ? null : Number(weight),
+          weight: loggedWeight,
           reps: Number(reps),
         })
         .select()
@@ -96,13 +211,22 @@ export default function SetLoggerPage() {
 
       if (insertError) throw insertError
       setCompletedSets(prev => [...prev, data])
-      setReps('')
       setCurrentSet(prev => prev + 1)
+
+      if (loggedWeight != null) {
+        await checkOverload(loggedWeight)
+      }
     } catch {
       setError('Failed to save — check connection')
     } finally {
       setSaving(false)
     }
+  }
+
+  function dismissOverload() {
+    const loggedWeight = Number(weight)
+    localStorage.setItem(`overload_dismissed_${exerciseId}_${loggedWeight}`, '1')
+    setShowOverloadPrompt(false)
   }
 
   if (!exercise) {
@@ -115,7 +239,7 @@ export default function SetLoggerPage() {
   return (
     <div className="px-4 pt-6 pb-6 max-w-lg mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <button onClick={() => router.back()} className="text-zinc-400 py-2 pr-4 text-sm">
           &lsaquo; Back
         </button>
@@ -129,6 +253,24 @@ export default function SetLoggerPage() {
         )}
       </div>
 
+      {/* Overload prompt */}
+      {showOverloadPrompt && (
+        <div className="bg-green-950 border border-green-700 rounded-2xl p-4 mb-4 flex items-start gap-3">
+          <span className="text-green-400 text-xl mt-0.5">&#8593;</span>
+          <div className="flex-1">
+            <p className="text-green-300 font-semibold text-sm">
+              Ready to increase weight on {exercise.name}
+            </p>
+            <p className="text-green-500 text-xs mt-0.5">
+              Try adding 2.5&ndash;5 lbs next session
+            </p>
+          </div>
+          <button onClick={dismissOverload} className="text-green-600 text-xl leading-none px-1">
+            &times;
+          </button>
+        </div>
+      )}
+
       {/* Exercise info */}
       <h1 className="text-2xl font-bold mb-1">{exercise.name}</h1>
       <p className="text-zinc-400 mb-4">Target: {exercise.sets} &times; {exercise.reps}</p>
@@ -137,7 +279,7 @@ export default function SetLoggerPage() {
       {exercise.neck_flag && (
         <div className="bg-red-950 border border-red-700 rounded-xl p-3 mb-4">
           <p className="text-red-400 font-semibold text-sm">
-            Neck-flagged — go light, stop if neck engages
+            Neck-flagged &mdash; go light, stop if neck engages
           </p>
         </div>
       )}
@@ -172,33 +314,28 @@ export default function SetLoggerPage() {
 
       {!allDone ? (
         <>
-          <p className="text-zinc-400 mb-4 text-lg font-medium">
+          <p className="text-zinc-400 mb-5 text-lg font-medium">
             Set {currentSet} of {exercise.sets}
           </p>
 
           {!isBodyweight && (
             <div className="mb-4">
-              <label className="text-zinc-400 text-sm mb-2 block">Weight (lbs)</label>
-              <input
-                type="number"
-                inputMode="decimal"
+              <Stepper
+                label="Weight"
+                unit="lbs"
                 value={weight}
-                onChange={e => setWeight(e.target.value)}
-                className="w-full bg-zinc-800 rounded-xl text-4xl font-bold text-center py-5 border-2 border-zinc-700 focus:border-amber-400 outline-none"
-                placeholder="0"
+                onChange={setWeight}
+                step={2.5}
               />
             </div>
           )}
 
           <div className="mb-6">
-            <label className="text-zinc-400 text-sm mb-2 block">Reps</label>
-            <input
-              type="number"
-              inputMode="numeric"
+            <Stepper
+              label="Reps"
               value={reps}
-              onChange={e => setReps(e.target.value)}
-              className="w-full bg-zinc-800 rounded-xl text-4xl font-bold text-center py-5 border-2 border-zinc-700 focus:border-amber-400 outline-none"
-              placeholder="0"
+              onChange={setReps}
+              step={1}
             />
           </div>
 
