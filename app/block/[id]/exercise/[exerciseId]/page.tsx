@@ -155,6 +155,7 @@ export default function SetLoggerPage() {
   // Rest timer
   const [restStartTime, setRestStartTime] = useState<number | null>(null)
   const [elapsed, setElapsed] = useState(0)
+  const prevRestReady = useRef(false)
 
   // Undo
   const [undoableSetId, setUndoableSetId] = useState<number | null>(null)
@@ -191,6 +192,8 @@ export default function SetLoggerPage() {
       if (lastSet?.weight != null) {
         setLastWeight(lastSet.weight)
         setWeight(String(lastSet.weight))
+        // Check overload before first set — best moment to see it
+        await runOverloadCheck(ex, lastSet.weight, null)
       } else {
         setLastWeight(null)
         const startingDefault = parseStartingWeight(ex.starting_weight)
@@ -209,6 +212,14 @@ export default function SetLoggerPage() {
     return () => clearInterval(interval)
   }, [restStartTime])
 
+  // Vibrate when rest period completes
+  useEffect(() => {
+    const restTarget = REST_TARGET[blockName] ?? 90
+    const ready = elapsed >= restTarget && restStartTime !== null
+    if (ready && !prevRestReady.current) navigator.vibrate?.(100)
+    prevRestReady.current = ready
+  }, [elapsed, blockName, restStartTime])
+
   async function getOrCreateSession(): Promise<number> {
     const today = new Date().toISOString().split('T')[0]
     const key = `session_${blockId}_${today}`
@@ -220,21 +231,18 @@ export default function SetLoggerPage() {
     return data.id
   }
 
-  async function checkOverload(loggedWeight: number) {
-    if (!exercise) return
-    const targetReps = parseTargetReps(exercise.reps)
+  async function runOverloadCheck(ex: Exercise, loggedWeight: number, currentSessionId: string | null) {
+    const targetReps = parseTargetReps(ex.reps)
     if (targetReps === 0) return
-    const dismissKey = `overload_dismissed_${exerciseId}_${loggedWeight}`
+    const dismissKey = `overload_dismissed_${ex.id}_${loggedWeight}`
     if (localStorage.getItem(dismissKey)) return
-    const today = new Date().toISOString().split('T')[0]
-    const currentSessionId = localStorage.getItem(`session_${blockId}_${today}`)
     const { data: allSets } = await supabase
-      .from('sets_log').select('session_id, weight, reps').eq('exercise_id', exerciseId)
+      .from('sets_log').select('session_id, weight, reps').eq('exercise_id', ex.id)
       .not('weight', 'is', null).order('completed_at', { ascending: false }).limit(100)
     if (!allSets) return
     const prevSessions: Record<number, { weight: number; reps: number | null }[]> = {}
     for (const s of allSets) {
-      if (String(s.session_id) === currentSessionId) continue
+      if (currentSessionId && String(s.session_id) === currentSessionId) continue
       if (!prevSessions[s.session_id]) prevSessions[s.session_id] = []
       prevSessions[s.session_id].push({ weight: Number(s.weight), reps: s.reps })
     }
@@ -328,7 +336,11 @@ export default function SetLoggerPage() {
       // Easter eggs
       maybeFireEasterEgg(loggedWeight)
 
-      if (loggedWeight != null) await checkOverload(loggedWeight)
+      if (loggedWeight != null) {
+        const today = new Date().toISOString().split('T')[0]
+        const currentSessionId = localStorage.getItem(`session_${blockId}_${today}`)
+        await runOverloadCheck(exercise, loggedWeight, currentSessionId)
+      }
     } catch {
       setError('Failed to save — check connection')
     } finally {
@@ -413,7 +425,11 @@ export default function SetLoggerPage() {
 
       {/* Exercise info */}
       <h1 className="text-2xl font-bold mb-1" style={{ color: C.text }}>{exercise.name}</h1>
-      <p className="mb-4" style={{ color: C.muted }}>Target: {exercise.sets} &times; {exercise.reps}</p>
+      <p className="mb-1" style={{ color: C.muted }}>Target: {exercise.sets} &times; {exercise.reps}</p>
+      {exercise.notes && (
+        <p className="text-sm italic mb-4" style={{ color: C.muted }}>{exercise.notes}</p>
+      )}
+      {!exercise.notes && <div className="mb-4" />}
 
       {/* Neck flag */}
       {exercise.neck_flag && (
@@ -472,20 +488,20 @@ export default function SetLoggerPage() {
 
       {/* Rest timer */}
       {restStartTime && !allDone && (
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs" style={{ color: C.muted }}>Rest</span>
+        <div className="mb-5 rounded-2xl p-4" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium" style={{ color: C.muted }}>Rest</span>
             <span
-              className="text-sm font-semibold tabular-nums"
-              style={{ color: restReady ? blockAccent : C.muted }}
+              className="text-2xl font-bold tabular-nums"
+              style={{ color: restReady ? blockAccent : C.text }}
             >
-              {restReady ? 'Ready' : formatElapsed(elapsed)}
+              {restReady ? 'Ready ✓' : formatElapsed(elapsed)}
             </span>
           </div>
-          <div className="h-0.5 rounded-full overflow-hidden" style={{ backgroundColor: C.border }}>
+          <div className="h-2.5 rounded-full overflow-hidden" style={{ backgroundColor: C.border }}>
             <div
               className="h-full rounded-full transition-all duration-1000"
-              style={{ width: `${restPct}%`, backgroundColor: restReady ? blockAccent : C.border }}
+              style={{ width: `${restPct}%`, backgroundColor: restReady ? blockAccent : C.muted }}
             />
           </div>
         </div>

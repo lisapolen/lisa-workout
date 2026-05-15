@@ -392,45 +392,36 @@ function StrengthView({
                         NECK
                       </span>
                     )}
-                    {isUpperBody && !ex.neck_flag && (
-                      <button
-                        onClick={(e) => { e.preventDefault(); setShowNeck(true) }}
-                        className="w-11 h-11 rounded-full border flex items-center justify-center text-sm font-bold leading-none flex-shrink-0"
-                        style={{ borderColor: C.danger, color: C.danger }}
-                      >
-                        !
-                      </button>
-                    )}
                   </div>
                   <p className="text-sm" style={{ color: C.muted }}>{ex.sets} &times; {ex.reps}</p>
                 </div>
                 <div className="text-right ml-4 flex flex-col items-end gap-1">
-                  {isComplete ? (
+                  {/* Weight always shown if available */}
+                  {isBodyweight ? (
+                    <p className="text-sm" style={{ color: C.muted }}>Bodyweight</p>
+                  ) : lastW !== null && lastW !== undefined ? (
+                    <p className="font-bold" style={{ color: isComplete ? C.success : accent }}>{lastW} lbs</p>
+                  ) : ex.starting_weight ? (
+                    <p className="text-sm" style={{ color: C.muted }}>{ex.starting_weight}</p>
+                  ) : (
+                    <p className="text-xs" style={{ color: C.muted }}>No weight yet</p>
+                  )}
+                  {/* Completion state below weight */}
+                  {isComplete && (
                     <span
-                      className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-sm"
-                      style={{
-                        backgroundColor: `${accent}30`,
-                        color: accent,
-                        animation: 'pop-in 0.35s cubic-bezier(0.34,1.56,0.64,1) both',
-                      }}
+                      className="text-xs font-bold"
+                      style={{ color: C.success, animation: 'pop-in 0.35s cubic-bezier(0.34,1.56,0.64,1) both' }}
                     >
-                      ✓
+                      ✓ done
                     </span>
-                  ) : isPartial ? (
+                  )}
+                  {isPartial && (
                     <span
                       className="text-xs font-bold px-2 py-0.5 rounded-full"
                       style={{ backgroundColor: `${accent}25`, color: accent }}
                     >
                       {doneCount}/{totalSets}
                     </span>
-                  ) : isBodyweight ? (
-                    <p className="text-sm" style={{ color: C.muted }}>Bodyweight</p>
-                  ) : lastW !== null && lastW !== undefined ? (
-                    <p className="font-bold" style={{ color: accent }}>{lastW} lbs</p>
-                  ) : ex.starting_weight ? (
-                    <p className="text-sm" style={{ color: C.muted }}>{ex.starting_weight}</p>
-                  ) : (
-                    <p className="text-xs" style={{ color: C.muted }}>No weight yet</p>
                   )}
                   <span className="text-2xl leading-none" style={{ color: C.border }}>&rsaquo;</span>
                 </div>
