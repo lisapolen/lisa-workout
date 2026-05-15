@@ -2,10 +2,21 @@
 import { useEffect, useState } from 'react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ReferenceLine, ResponsiveContainer, BarChart, Bar, Cell,
+  ReferenceLine, ResponsiveContainer,
 } from 'recharts'
 import { supabase } from '@/lib/supabase'
 import { Exercise, CardioLog, VO2maxLog } from '@/lib/types'
+
+const C = {
+  bg:      '#1C1814',
+  card:    '#252018',
+  border:  '#3A3228',
+  text:    '#F5F0E8',
+  muted:   '#A89880',
+  accent:  '#C4714A',
+  success: '#6B8F6B',
+  danger:  '#C4514A',
+}
 
 type Tab = 'strength' | 'cardio' | 'vo2max'
 
@@ -16,9 +27,9 @@ function vo2Pct(value: number): number {
 }
 
 const CARDIO_COLORS: Record<string, string> = {
-  interval_run: '#f59e0b',
-  sustained_run: '#3b82f6',
-  zone2:         '#10b981',
+  interval_run: C.accent,
+  sustained_run: '#8B7355',
+  zone2:         C.success,
 }
 const CARDIO_LABELS: Record<string, string> = {
   interval_run: 'Interval Run',
@@ -47,7 +58,6 @@ function StrengthTab() {
       .then(({ data }) => {
         if (data) {
           setExercises(data)
-          // Default to leg press
           const lp = data.find((e: Exercise) => e.name === 'Seated Leg Press')
           if (lp) setSelected(lp.id)
         }
@@ -64,7 +74,6 @@ function StrengthTab() {
       .order('completed_at')
       .then(({ data }) => {
         if (!data) return
-        // Max weight per session date
         const byDate: Record<string, number> = {}
         data.forEach((row: any) => {
           const d = row.sessions?.date ?? row.completed_at?.split('T')[0]
@@ -79,11 +88,12 @@ function StrengthTab() {
   return (
     <div>
       <div className="mb-4">
-        <label className="text-zinc-400 text-sm mb-2 block">Exercise</label>
+        <label className="text-sm mb-2 block" style={{ color: C.muted }}>Exercise</label>
         <select
           value={selected ?? ''}
           onChange={e => setSelected(Number(e.target.value))}
-          className="w-full bg-zinc-800 border border-zinc-700 rounded-xl p-3 text-white text-base outline-none"
+          className="w-full rounded-xl p-3 text-base outline-none"
+          style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, color: C.text }}
         >
           {exercises.map(ex => (
             <option key={ex.id} value={ex.id}>{ex.name}</option>
@@ -92,32 +102,34 @@ function StrengthTab() {
       </div>
 
       {selectedEx?.name === 'Seated Leg Press' && (
-        <div className="bg-blue-950/40 border border-blue-800 rounded-xl px-4 py-2 mb-4">
-          <p className="text-blue-300 text-xs font-semibold">Bone density proxy &mdash; primary progressive overload indicator</p>
+        <div className="rounded-xl px-4 py-2 mb-4" style={{ backgroundColor: 'rgba(196,113,74,0.1)', border: `1px solid ${C.accent}` }}>
+          <p className="text-xs font-semibold" style={{ color: C.accent }}>Bone density proxy &mdash; primary progressive overload indicator</p>
         </div>
       )}
 
       {history.length > 0 ? (
-        <div className="bg-zinc-900 rounded-2xl p-4 border border-zinc-800">
-          <p className="text-zinc-400 text-sm mb-3">
+        <div className="rounded-2xl p-4" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
+          <p className="text-sm mb-3" style={{ color: C.muted }}>
             Weight over last {history.length} sessions &mdash; {selectedEx?.name}
           </p>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={history} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
-              <XAxis dataKey="date" tickFormatter={fmt} tick={{ fill: '#71717a', fontSize: 11 }} />
-              <YAxis tick={{ fill: '#71717a', fontSize: 11 }} />
+              <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+              <XAxis dataKey="date" tickFormatter={fmt} tick={{ fill: C.muted, fontSize: 11 }} />
+              <YAxis tick={{ fill: C.muted, fontSize: 11 }} />
               <Tooltip
-                contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 8 }}
+                contentStyle={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8 }}
+                labelStyle={{ color: C.muted }}
+                itemStyle={{ color: C.text }}
                 labelFormatter={(label) => typeof label === 'string' ? fmt(label) : String(label)}
                 formatter={(v) => [`${v} lbs`, 'Weight']}
               />
-              <Line type="monotone" dataKey="weight" stroke="#f59e0b" strokeWidth={2} dot={{ fill: '#f59e0b', r: 4 }} />
+              <Line type="monotone" dataKey="weight" stroke={C.accent} strokeWidth={2} dot={{ fill: C.accent, r: 4 }} />
             </LineChart>
           </ResponsiveContainer>
         </div>
       ) : (
-        <div className="bg-zinc-900 rounded-2xl p-8 border border-zinc-800 text-center text-zinc-500">
+        <div className="rounded-2xl p-8 text-center" style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, color: C.muted }}>
           No data yet for this exercise
         </div>
       )}
@@ -147,13 +159,13 @@ function CardioTab() {
         {Object.entries(CARDIO_COLORS).map(([key, color]) => (
           <div key={key} className="flex items-center gap-1">
             <span className="w-3 h-3 rounded-full inline-block" style={{ background: color }} />
-            <span className="text-zinc-400">{CARDIO_LABELS[key]}</span>
+            <span style={{ color: C.muted }}>{CARDIO_LABELS[key]}</span>
           </div>
         ))}
       </div>
 
       {logs.length === 0 ? (
-        <div className="bg-zinc-900 rounded-2xl p-8 border border-zinc-800 text-center text-zinc-500">
+        <div className="rounded-2xl p-8 text-center" style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, color: C.muted }}>
           No cardio logged in the last 4 weeks
         </div>
       ) : (
@@ -161,23 +173,23 @@ function CardioTab() {
           {logs.map(log => (
             <div
               key={log.id}
-              className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4"
-              style={{ borderLeftColor: CARDIO_COLORS[log.type], borderLeftWidth: 4 }}
+              className="rounded-2xl p-4"
+              style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderLeftColor: CARDIO_COLORS[log.type], borderLeftWidth: 4 }}
             >
               <div className="flex items-start justify-between">
                 <div>
                   <p className="font-semibold" style={{ color: CARDIO_COLORS[log.type] }}>
                     {CARDIO_LABELS[log.type]}
-                    {log.subtype && <span className="text-zinc-400 text-sm font-normal ml-1">({log.subtype})</span>}
+                    {log.subtype && <span className="text-sm font-normal ml-1" style={{ color: C.muted }}>({log.subtype})</span>}
                   </p>
-                  <p className="text-zinc-500 text-sm">{fmt(log.date)}</p>
+                  <p className="text-sm" style={{ color: C.muted }}>{fmt(log.date)}</p>
                 </div>
                 <div className="text-right">
-                  {log.duration_minutes && <p className="text-white font-semibold">{log.duration_minutes} min</p>}
-                  {log.avg_hr && <p className="text-zinc-400 text-sm">{log.avg_hr} bpm avg</p>}
+                  {log.duration_minutes && <p className="font-semibold" style={{ color: C.text }}>{log.duration_minutes} min</p>}
+                  {log.avg_hr && <p className="text-sm" style={{ color: C.muted }}>{log.avg_hr} bpm avg</p>}
                 </div>
               </div>
-              {log.notes && <p className="text-zinc-500 text-sm mt-2">{log.notes}</p>}
+              {log.notes && <p className="text-sm mt-2" style={{ color: C.muted }}>{log.notes}</p>}
             </div>
           ))}
         </div>
@@ -221,63 +233,63 @@ function VO2maxTab() {
 
   return (
     <div>
-      {/* Current status */}
       {latest && (
-        <div className="bg-zinc-900 rounded-2xl p-5 border border-zinc-800 mb-5">
+        <div className="rounded-2xl p-5 mb-5" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
           <div className="flex items-baseline gap-2 mb-2">
-            <span className="text-5xl font-bold">{latest.value}</span>
-            <span className="text-zinc-400">/ 34 target</span>
+            <span className="text-5xl font-bold" style={{ color: C.text }}>{latest.value}</span>
+            <span style={{ color: C.muted }}>/ 34 target</span>
           </div>
-          <div className="w-full bg-zinc-800 rounded-full h-3 mb-1">
+          <div className="w-full rounded-full h-3 mb-1" style={{ backgroundColor: C.border }}>
             <div
-              className="bg-amber-400 h-3 rounded-full"
-              style={{ width: `${vo2Pct(Number(latest.value)).toFixed(1)}%` }}
+              className="h-3 rounded-full"
+              style={{ width: `${vo2Pct(Number(latest.value)).toFixed(1)}%`, backgroundColor: C.accent }}
             />
           </div>
           <div className="flex justify-between mt-1 mb-2">
-            <span className="text-xs text-zinc-500">23 (low)</span>
-            <span className="text-xs text-amber-400">Target: 34</span>
-            <span className="text-xs text-zinc-500">40 (athlete)</span>
+            <span className="text-xs" style={{ color: C.muted }}>23 (low)</span>
+            <span className="text-xs font-semibold" style={{ color: C.success }}>Target: 34</span>
+            <span className="text-xs" style={{ color: C.muted }}>40 (athlete)</span>
           </div>
-          <p className="text-zinc-500 text-xs">
+          <p className="text-xs" style={{ color: C.muted }}>
             {(34 - Number(latest.value)).toFixed(1)} points to goal
             &mdash; Note: Apple Watch may underestimate due to asthma affecting HR at pace
           </p>
         </div>
       )}
 
-      {/* Chart */}
       {logs.length > 1 && (
-        <div className="bg-zinc-900 rounded-2xl p-4 border border-zinc-800 mb-5">
-          <p className="text-zinc-400 text-sm mb-3">VO&#x2082;max over time</p>
+        <div className="rounded-2xl p-4 mb-5" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
+          <p className="text-sm mb-3" style={{ color: C.muted }}>VO&#x2082;max over time</p>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={logs} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#3f3f46" />
-              <XAxis dataKey="date" tickFormatter={fmt} tick={{ fill: '#71717a', fontSize: 11 }} />
-              <YAxis domain={[20, 38]} tick={{ fill: '#71717a', fontSize: 11 }} />
+              <CartesianGrid strokeDasharray="3 3" stroke={C.border} />
+              <XAxis dataKey="date" tickFormatter={fmt} tick={{ fill: C.muted, fontSize: 11 }} />
+              <YAxis domain={[20, 38]} tick={{ fill: C.muted, fontSize: 11 }} />
               <Tooltip
-                contentStyle={{ background: '#18181b', border: '1px solid #3f3f46', borderRadius: 8 }}
+                contentStyle={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8 }}
+                labelStyle={{ color: C.muted }}
+                itemStyle={{ color: C.text }}
                 labelFormatter={(label) => typeof label === 'string' ? fmt(label) : String(label)}
                 formatter={(v) => [v, 'VO\u2082max']}
               />
-              <ReferenceLine y={34} stroke="#f59e0b" strokeDasharray="4 4" label={{ value: 'Goal 34', fill: '#f59e0b', fontSize: 11 }} />
-              <Line type="monotone" dataKey="value" stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981', r: 4 }} />
+              <ReferenceLine y={34} stroke={C.accent} strokeDasharray="4 4" label={{ value: 'Goal 34', fill: C.accent, fontSize: 11 }} />
+              <Line type="monotone" dataKey="value" stroke={C.success} strokeWidth={2} dot={{ fill: C.success, r: 4 }} />
             </LineChart>
           </ResponsiveContainer>
         </div>
       )}
 
-      {/* Log new value */}
-      <div className="bg-zinc-900 rounded-2xl p-4 border border-zinc-800">
-        <p className="font-semibold mb-3">Log new measurement</p>
+      <div className="rounded-2xl p-4" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
+        <p className="font-semibold mb-3" style={{ color: C.text }}>Log new measurement</p>
         <div className="flex gap-3 mb-3">
           {(['manual', 'apple_watch'] as const).map(s => (
             <button
               key={s}
               onClick={() => setSource(s)}
-              className={`flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 ${
-                source === s ? 'border-amber-400 text-amber-400' : 'border-zinc-700 text-zinc-400'
-              }`}
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold border-2 transition-colors"
+              style={source === s
+                ? { borderColor: C.accent, color: C.accent }
+                : { borderColor: C.border, color: C.muted }}
             >
               {s === 'manual' ? 'Manual' : 'Apple Watch'}
             </button>
@@ -291,12 +303,14 @@ function VO2maxTab() {
             onChange={e => setNewValue(e.target.value)}
             placeholder="29"
             step="0.1"
-            className="flex-1 bg-zinc-800 rounded-xl text-2xl font-bold text-center py-4 border-2 border-zinc-700 focus:border-amber-400 outline-none"
+            className="flex-1 rounded-xl text-2xl font-bold text-center py-4 border-2 outline-none"
+            style={{ backgroundColor: C.card, borderColor: C.border, color: C.text }}
           />
           <button
             onClick={addEntry}
             disabled={saving || !newValue}
-            className="bg-amber-400 text-black font-bold rounded-xl px-6 text-lg disabled:opacity-40 active:opacity-80"
+            className="font-bold rounded-xl px-6 text-lg disabled:opacity-40 active:opacity-80"
+            style={{ backgroundColor: C.accent, color: C.text }}
           >
             Save
           </button>
@@ -313,17 +327,17 @@ export default function ProgressPage() {
 
   return (
     <div className="px-4 pt-8 max-w-lg mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Progress</h1>
+      <h1 className="text-3xl font-bold mb-6" style={{ color: '#F5F0E8' }}>Progress</h1>
 
-      {/* Tabs */}
-      <div className="flex bg-zinc-900 rounded-2xl p-1 mb-6 border border-zinc-800">
+      <div className="flex rounded-2xl p-1 mb-6" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
         {(['strength', 'cardio', 'vo2max'] as Tab[]).map(t => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
-              tab === t ? 'bg-amber-400 text-black' : 'text-zinc-400'
-            }`}
+            className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+            style={tab === t
+              ? { backgroundColor: C.accent, color: C.text }
+              : { color: C.muted }}
           >
             {t === 'vo2max' ? 'VO\u2082max' : t.charAt(0).toUpperCase() + t.slice(1)}
           </button>
