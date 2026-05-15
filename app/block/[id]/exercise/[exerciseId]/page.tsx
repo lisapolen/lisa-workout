@@ -5,6 +5,17 @@ import { supabase } from '@/lib/supabase'
 import { Exercise, SetLog } from '@/lib/types'
 import NeckSafetyModal from '@/components/NeckSafetyModal'
 
+const C = {
+  bg:       '#1C1814',
+  card:     '#252018',
+  border:   '#3A3228',
+  text:     '#F5F0E8',
+  muted:    '#A89880',
+  accent:   '#C4714A',
+  success:  '#6B8F6B',
+  danger:   '#C4514A',
+}
+
 function parseTargetReps(repsStr: string | null): number {
   if (!repsStr) return 0
   const match = repsStr.match(/\d+/)
@@ -35,15 +46,15 @@ function Stepper({ label, value, onChange, step, min = 0, unit }: StepperProps) 
 
   return (
     <div>
-      <label className="text-zinc-400 text-sm mb-2 block">
-        {label}{unit && <span className="text-zinc-600 ml-1">({unit})</span>}
+      <label className="text-sm mb-2 block" style={{ color: C.muted }}>
+        {label}{unit && <span className="ml-1" style={{ color: C.border }}>({unit})</span>}
       </label>
       <div className="flex items-stretch gap-2">
         <button
           type="button"
           onPointerDown={() => adjust(-step)}
-          className="w-16 rounded-2xl text-3xl font-bold text-white flex items-center justify-center border active:opacity-70 select-none"
-          style={{ backgroundColor: '#1A1A1A', borderColor: '#374151' }}
+          className="w-16 rounded-2xl text-3xl font-bold flex items-center justify-center select-none active:opacity-70"
+          style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, color: C.text }}
         >
           -
         </button>
@@ -52,14 +63,14 @@ function Stepper({ label, value, onChange, step, min = 0, unit }: StepperProps) 
           inputMode="decimal"
           value={value}
           onChange={e => onChange(e.target.value)}
-          className="flex-1 rounded-xl text-4xl font-bold text-center py-4 outline-none text-white"
-          style={{ backgroundColor: '#1A1A1A', border: '2px solid #374151' }}
+          className="flex-1 rounded-xl text-4xl font-bold text-center py-4 outline-none"
+          style={{ backgroundColor: C.card, border: `2px solid ${C.border}`, color: C.text }}
         />
         <button
           type="button"
           onPointerDown={() => adjust(step)}
-          className="w-16 rounded-2xl text-3xl font-bold text-white flex items-center justify-center border active:opacity-70 select-none"
-          style={{ backgroundColor: '#1A1A1A', borderColor: '#374151' }}
+          className="w-16 rounded-2xl text-3xl font-bold flex items-center justify-center select-none active:opacity-70"
+          style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, color: C.text }}
         >
           +
         </button>
@@ -88,35 +99,19 @@ export default function SetLoggerPage() {
 
   useEffect(() => {
     async function load() {
-      const { data: ex } = await supabase
-        .from('exercises')
-        .select('*')
-        .eq('id', exerciseId)
-        .single()
+      const { data: ex } = await supabase.from('exercises').select('*').eq('id', exerciseId).single()
       if (!ex) return
       setExercise(ex)
 
-      // Set default reps from target
       const targetReps = parseTargetReps(ex.reps)
       if (targetReps > 0) setReps(String(targetReps))
 
-      // Check if upper body block
-      const { data: blk } = await supabase
-        .from('blocks')
-        .select('name')
-        .eq('id', ex.block_id)
-        .single()
+      const { data: blk } = await supabase.from('blocks').select('name').eq('id', ex.block_id).single()
       if (blk?.name === 'Upper Body') setIsUpperBody(true)
 
-      // Last logged weight (or starting weight as fallback)
       const { data: lastSet } = await supabase
-        .from('sets_log')
-        .select('weight')
-        .eq('exercise_id', exerciseId)
-        .not('weight', 'is', null)
-        .order('completed_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
+        .from('sets_log').select('weight').eq('exercise_id', exerciseId)
+        .not('weight', 'is', null).order('completed_at', { ascending: false }).limit(1).maybeSingle()
 
       if (lastSet?.weight != null) {
         setLastWeight(lastSet.weight)
@@ -135,13 +130,7 @@ export default function SetLoggerPage() {
     const key = `session_${blockId}_${today}`
     const stored = localStorage.getItem(key)
     if (stored) return Number(stored)
-
-    const { data, error } = await supabase
-      .from('sessions')
-      .insert({ date: today, block_id: blockId })
-      .select('id')
-      .single()
-
+    const { data, error } = await supabase.from('sessions').insert({ date: today, block_id: blockId }).select('id').single()
     if (error || !data) throw new Error('Could not create session')
     localStorage.setItem(key, String(data.id))
     return data.id
@@ -151,41 +140,25 @@ export default function SetLoggerPage() {
     if (!exercise) return
     const targetReps = parseTargetReps(exercise.reps)
     if (targetReps === 0) return
-
     const dismissKey = `overload_dismissed_${exerciseId}_${loggedWeight}`
     if (localStorage.getItem(dismissKey)) return
-
     const today = new Date().toISOString().split('T')[0]
-    const currentSessionKey = `session_${blockId}_${today}`
-    const currentSessionId = localStorage.getItem(currentSessionKey)
-
+    const currentSessionId = localStorage.getItem(`session_${blockId}_${today}`)
     const { data: allSets } = await supabase
-      .from('sets_log')
-      .select('session_id, weight, reps')
-      .eq('exercise_id', exerciseId)
-      .not('weight', 'is', null)
-      .order('completed_at', { ascending: false })
-      .limit(100)
-
+      .from('sets_log').select('session_id, weight, reps').eq('exercise_id', exerciseId)
+      .not('weight', 'is', null).order('completed_at', { ascending: false }).limit(100)
     if (!allSets) return
-
-    // Group by session, excluding current
     const prevSessions: Record<number, { weight: number; reps: number | null }[]> = {}
     for (const s of allSets) {
       if (String(s.session_id) === currentSessionId) continue
       if (!prevSessions[s.session_id]) prevSessions[s.session_id] = []
       prevSessions[s.session_id].push({ weight: Number(s.weight), reps: s.reps })
     }
-
     const prevIds = Object.keys(prevSessions)
     if (prevIds.length < 2) return
-
-    // Check last 2 sessions: all sets at same weight, all reps >= target
-    const qualified = prevIds.slice(0, 2).every(sid => {
-      const sets = prevSessions[Number(sid)]
-      return sets.every(s => s.weight === loggedWeight && (s.reps ?? 0) >= targetReps)
-    })
-
+    const qualified = prevIds.slice(0, 2).every(sid =>
+      prevSessions[Number(sid)].every(s => s.weight === loggedWeight && (s.reps ?? 0) >= targetReps)
+    )
     if (qualified) setShowOverloadPrompt(true)
   }
 
@@ -194,7 +167,6 @@ export default function SetLoggerPage() {
     const isBodyweight = exercise.starting_weight === 'Bodyweight'
     if (!isBodyweight && !weight) return
     if (!reps) return
-
     setSaving(true)
     setError('')
     try {
@@ -202,23 +174,12 @@ export default function SetLoggerPage() {
       const loggedWeight = isBodyweight ? null : Number(weight)
       const { data, error: insertError } = await supabase
         .from('sets_log')
-        .insert({
-          session_id: sessionId,
-          exercise_id: exerciseId,
-          set_number: currentSet,
-          weight: loggedWeight,
-          reps: Number(reps),
-        })
-        .select()
-        .single()
-
+        .insert({ session_id: sessionId, exercise_id: exerciseId, set_number: currentSet, weight: loggedWeight, reps: Number(reps) })
+        .select().single()
       if (insertError) throw insertError
       setCompletedSets(prev => [...prev, data])
       setCurrentSet(prev => prev + 1)
-
-      if (loggedWeight != null) {
-        await checkOverload(loggedWeight)
-      }
+      if (loggedWeight != null) await checkOverload(loggedWeight)
     } catch {
       setError('Failed to save — check connection')
     } finally {
@@ -227,13 +188,12 @@ export default function SetLoggerPage() {
   }
 
   function dismissOverload() {
-    const loggedWeight = Number(weight)
-    localStorage.setItem(`overload_dismissed_${exerciseId}_${loggedWeight}`, '1')
+    localStorage.setItem(`overload_dismissed_${exerciseId}_${Number(weight)}`, '1')
     setShowOverloadPrompt(false)
   }
 
   if (!exercise) {
-    return <div className="flex items-center justify-center h-screen text-zinc-400">Loading...</div>
+    return <div className="flex items-center justify-center h-screen" style={{ color: C.muted }}>Loading...</div>
   }
 
   const isBodyweight = exercise.starting_weight === 'Bodyweight'
@@ -243,13 +203,14 @@ export default function SetLoggerPage() {
     <div className="px-4 pt-6 pb-6 max-w-lg mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <button onClick={() => router.back()} className="text-zinc-400 py-2 pr-4 text-sm">
+        <button onClick={() => router.back()} className="py-2 pr-4 text-sm" style={{ color: C.muted }}>
           &lsaquo; Back
         </button>
         {isUpperBody && (
           <button
             onClick={() => setShowNeck(true)}
-            className="w-10 h-10 rounded-full border-2 border-red-500 text-red-400 font-bold text-lg flex items-center justify-center"
+            className="w-10 h-10 rounded-full border-2 font-bold text-lg flex items-center justify-center"
+            style={{ borderColor: C.danger, color: C.danger }}
           >
             !
           </button>
@@ -258,45 +219,45 @@ export default function SetLoggerPage() {
 
       {/* Overload prompt */}
       {showOverloadPrompt && (
-        <div className="rounded-2xl p-4 mb-4 flex items-start gap-3" style={{ backgroundColor: 'rgba(59,130,246,0.1)', border: '1px solid #3B82F6' }}>
-          <span className="text-xl mt-0.5" style={{ color: '#3B82F6' }}>&#8593;</span>
+        <div className="rounded-2xl p-4 mb-4 flex items-start gap-3" style={{ backgroundColor: '#2A3828', borderLeft: `3px solid ${C.success}` }}>
+          <span className="text-xl mt-0.5" style={{ color: C.success }}>&#8593;</span>
           <div className="flex-1">
-            <p className="font-semibold text-sm text-white">
+            <p className="font-semibold text-sm" style={{ color: C.text }}>
               Ready to increase weight on {exercise.name}
             </p>
-            <p className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>
+            <p className="text-xs mt-0.5" style={{ color: C.muted }}>
               Try adding 2.5&ndash;5 lbs next session
             </p>
           </div>
-          <button onClick={dismissOverload} className="text-xl leading-none px-1" style={{ color: '#9CA3AF' }}>
+          <button onClick={dismissOverload} className="text-xl leading-none px-1" style={{ color: C.muted }}>
             &times;
           </button>
         </div>
       )}
 
       {/* Exercise info */}
-      <h1 className="text-2xl font-bold mb-1">{exercise.name}</h1>
-      <p className="text-zinc-400 mb-4">Target: {exercise.sets} &times; {exercise.reps}</p>
+      <h1 className="text-2xl font-bold mb-1" style={{ color: C.text }}>{exercise.name}</h1>
+      <p className="mb-4" style={{ color: C.muted }}>Target: {exercise.sets} &times; {exercise.reps}</p>
 
       {/* Neck flag */}
       {exercise.neck_flag && (
-        <div className="rounded-xl p-3 mb-4" style={{ backgroundColor: 'rgba(239,68,68,0.1)', border: '1px solid #EF4444' }}>
-          <p className="font-semibold text-sm" style={{ color: '#EF4444' }}>
+        <div className="rounded-xl p-3 mb-4" style={{ backgroundColor: 'rgba(196,81,74,0.1)', border: `1px solid ${C.danger}` }}>
+          <p className="font-semibold text-sm" style={{ color: C.danger }}>
             Neck-flagged &mdash; go light, stop if neck engages
           </p>
         </div>
       )}
 
       {/* Last weight */}
-      <div className="rounded-xl p-4 mb-5" style={{ backgroundColor: '#1A1A1A' }}>
+      <div className="rounded-xl p-4 mb-5" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
         {isBodyweight ? (
-          <p style={{ color: '#9CA3AF' }}>Bodyweight exercise</p>
+          <p style={{ color: C.muted }}>Bodyweight exercise</p>
         ) : lastWeight != null ? (
-          <p className="text-lg text-white">
-            Last time: <span className="font-bold text-xl" style={{ color: '#3B82F6' }}>{lastWeight} lbs</span>
+          <p className="text-lg" style={{ color: C.text }}>
+            Last time: <span className="font-bold text-xl" style={{ color: C.accent }}>{lastWeight} lbs</span>
           </p>
         ) : (
-          <p style={{ color: '#9CA3AF' }}>No previous weight &mdash; enter today&apos;s weight</p>
+          <p style={{ color: C.muted }}>No previous weight &mdash; enter today&apos;s weight</p>
         )}
       </div>
 
@@ -304,12 +265,12 @@ export default function SetLoggerPage() {
       {completedSets.length > 0 && (
         <div className="mb-5 space-y-1">
           {completedSets.map((s) => (
-            <div key={s.id} className="flex items-center gap-3 py-2.5 border-b border-zinc-800">
-              <span className="text-zinc-500 w-16 text-sm">Set {s.set_number}</span>
-              <span className="text-green-400 font-semibold">
+            <div key={s.id} className="flex items-center gap-3 py-2.5" style={{ borderBottom: `1px solid ${C.border}` }}>
+              <span className="w-16 text-sm" style={{ color: C.muted }}>Set {s.set_number}</span>
+              <span className="font-semibold" style={{ color: C.text }}>
                 {s.weight != null ? `${s.weight} lbs` : 'BW'} &times; {s.reps}
               </span>
-              <span className="text-green-500 ml-auto">&#10003;</span>
+              <span className="ml-auto font-bold" style={{ color: C.success }}>&#10003;</span>
             </div>
           ))}
         </div>
@@ -317,50 +278,40 @@ export default function SetLoggerPage() {
 
       {!allDone ? (
         <>
-          <p className="text-zinc-400 mb-5 text-lg font-medium">
+          <p className="mb-5 text-lg font-medium" style={{ color: C.muted }}>
             Set {currentSet} of {exercise.sets}
           </p>
 
           {!isBodyweight && (
             <div className="mb-4">
-              <Stepper
-                label="Weight"
-                unit="lbs"
-                value={weight}
-                onChange={setWeight}
-                step={2.5}
-              />
+              <Stepper label="Weight" unit="lbs" value={weight} onChange={setWeight} step={2.5} />
             </div>
           )}
 
           <div className="mb-6">
-            <Stepper
-              label="Reps"
-              value={reps}
-              onChange={setReps}
-              step={1}
-            />
+            <Stepper label="Reps" value={reps} onChange={setReps} step={1} />
           </div>
 
-          {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
+          {error && <p className="text-sm mb-3" style={{ color: C.danger }}>{error}</p>}
 
           <button
             onClick={logSet}
             disabled={saving || (!isBodyweight && !weight) || !reps}
-            className="w-full text-white font-bold text-2xl rounded-xl py-5 disabled:opacity-40 active:opacity-80"
-            style={{ backgroundColor: '#3B82F6' }}
+            className="w-full font-bold text-2xl rounded-xl py-5 disabled:opacity-40 active:opacity-80"
+            style={{ backgroundColor: C.accent, color: C.text }}
           >
             {saving ? 'Saving...' : 'Done'}
           </button>
         </>
       ) : (
         <div className="text-center py-8">
-          <p className="text-6xl mb-4">&#10003;</p>
-          <p className="text-2xl font-bold text-green-400 mb-1">All sets complete!</p>
-          <p className="text-zinc-500 mb-8">{exercise.name}</p>
+          <p className="text-6xl mb-4" style={{ color: C.success }}>&#10003;</p>
+          <p className="text-2xl font-bold mb-1" style={{ color: C.success }}>All sets complete!</p>
+          <p className="mb-8" style={{ color: C.muted }}>{exercise.name}</p>
           <button
             onClick={() => router.back()}
-            className="w-full bg-zinc-800 text-white font-bold text-xl rounded-2xl py-5"
+            className="w-full font-bold text-xl rounded-xl py-5"
+            style={{ border: `1px solid ${C.accent}`, color: C.accent, backgroundColor: 'transparent' }}
           >
             &lsaquo; Back to block
           </button>

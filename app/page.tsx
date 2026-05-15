@@ -4,12 +4,14 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { Block, VO2maxLog } from '@/lib/types'
 
-const BLOCK_BG: Record<string, string> = {
-  'Lower Body': '#1D3461',
-  'Upper Body': '#2D2A6E',
-  'Cardio':     '#7F1D1D',
-  'Core':       '#064E3B',
-  'Recovery':   '#1F2937',
+const C = {
+  bg:        '#1C1814',
+  card:      '#252018',
+  border:    '#3A3228',
+  text:      '#F5F0E8',
+  muted:     '#A89880',
+  accent:    '#C4714A',
+  success:   '#6B8F6B',
 }
 
 const BLOCK_LABEL: Record<string, string> = {
@@ -57,10 +59,7 @@ export default function HomePage() {
       if (blocksData) setBlocks(blocksData)
       if (vo2Data?.[0]) setVo2max(vo2Data[0])
 
-      if (!sessionData) {
-        setLastSession(false)
-        return
-      }
+      if (!sessionData) { setLastSession(false); return }
 
       const s = sessionData as any
       const { data: setsData } = await supabase
@@ -78,20 +77,17 @@ export default function HomePage() {
           exercises.push({ name: r.exercises?.name ?? '', weight: r.weight, reps: r.reps })
         }
       }
-
       setLastSession({ date: s.date, block_name: s.blocks?.name ?? 'Workout', exercises })
     }
     load()
   }, [])
 
-  const dateStr = new Date().toLocaleDateString('en-US', {
-    weekday: 'long', month: 'long', day: 'numeric',
-  })
+  const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 
   return (
     <div className="px-4 pt-8 max-w-lg mx-auto">
-      <p className="text-sm" style={{ color: '#9CA3AF' }}>{dateStr}</p>
-      <h1 className="text-3xl font-bold mt-1 mb-6">What are you doing today?</h1>
+      <p className="text-sm" style={{ color: C.muted }}>{dateStr}</p>
+      <h1 className="text-3xl font-bold mt-1 mb-6" style={{ color: C.text }}>What are you doing today?</h1>
 
       {/* Block cards */}
       <div className="flex flex-col gap-3 mb-6">
@@ -100,62 +96,62 @@ export default function HomePage() {
             key={block.id}
             href={`/block/${block.id}`}
             className="flex items-center gap-4 p-5 rounded-2xl active:opacity-80"
-            style={{ backgroundColor: BLOCK_BG[block.name] ?? '#1A1A1A' }}
+            style={{ backgroundColor: C.card, borderLeft: `3px solid ${C.accent}` }}
           >
             <div className="flex-1">
-              <p className="text-xs uppercase tracking-wider mb-0.5" style={{ color: '#9CA3AF' }}>
+              <p className="text-xs uppercase tracking-wider mb-0.5" style={{ color: C.muted }}>
                 Block {i + 1} &middot; {BLOCK_LABEL[block.type]}
               </p>
-              <p className="text-xl font-bold text-white">{block.name}</p>
+              <p className="text-xl font-bold" style={{ color: C.text }}>{block.name}</p>
             </div>
-            <span className="text-3xl leading-none" style={{ color: '#9CA3AF' }}>&rsaquo;</span>
+            <span className="text-3xl leading-none" style={{ color: C.muted }}>&rsaquo;</span>
           </Link>
         ))}
       </div>
 
       {/* VO2max widget */}
       {vo2max && (
-        <div className="rounded-2xl p-5 mb-4" style={{ backgroundColor: '#1A1A1A' }}>
+        <div className="rounded-2xl p-5 mb-4" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-white">VO&#x2082;max</h2>
-            <span className="text-xs" style={{ color: '#9CA3AF' }}>Updated {relativeDate(vo2max.date)}</span>
+            <h2 className="font-semibold" style={{ color: C.text }}>VO&#x2082;max</h2>
+            <span className="text-xs" style={{ color: C.muted }}>Updated {relativeDate(vo2max.date)}</span>
           </div>
           <div className="flex items-baseline gap-2 mb-3">
-            <span className="text-5xl font-bold text-white">{vo2max.value}</span>
-            <span style={{ color: '#9CA3AF' }}>/ 34 goal</span>
+            <span className="text-5xl font-bold" style={{ color: C.text }}>{vo2max.value}</span>
+            <span style={{ color: C.muted }}>/ 34 goal</span>
           </div>
-          <div className="w-full rounded-full h-3 mb-1" style={{ backgroundColor: '#374151' }}>
+          <div className="w-full rounded-full h-3 mb-1" style={{ backgroundColor: C.border }}>
             <div
               className="h-3 rounded-full transition-all"
-              style={{ width: `${vo2Pct(Number(vo2max.value)).toFixed(1)}%`, backgroundColor: '#3B82F6' }}
+              style={{ width: `${vo2Pct(Number(vo2max.value)).toFixed(1)}%`, backgroundColor: C.accent }}
             />
           </div>
           <div className="flex justify-between mt-1">
-            <span className="text-xs" style={{ color: '#9CA3AF' }}>23 (low)</span>
-            <span className="text-xs font-semibold" style={{ color: '#3B82F6' }}>Target: 34</span>
-            <span className="text-xs" style={{ color: '#9CA3AF' }}>40 (athlete)</span>
+            <span className="text-xs" style={{ color: C.muted }}>23 (low)</span>
+            <span className="text-xs font-semibold" style={{ color: C.success }}>Target: 34</span>
+            <span className="text-xs" style={{ color: C.muted }}>40 (athlete)</span>
           </div>
         </div>
       )}
 
       {/* Last session */}
       {lastSession === false ? (
-        <div className="rounded-2xl p-5 text-center" style={{ backgroundColor: '#1A1A1A' }}>
-          <p style={{ color: '#9CA3AF' }}>No sessions logged yet &mdash; get started!</p>
+        <div className="rounded-2xl p-5 text-center" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
+          <p style={{ color: C.muted }}>No sessions logged yet &mdash; get started!</p>
         </div>
       ) : lastSession ? (
-        <div className="rounded-2xl p-4" style={{ backgroundColor: '#1A1A1A' }}>
-          <p className="text-xs uppercase tracking-wider mb-1" style={{ color: '#9CA3AF' }}>Last session</p>
+        <div className="rounded-2xl p-4" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
+          <p className="text-xs uppercase tracking-wider mb-1" style={{ color: C.muted }}>Last session</p>
           <div className="flex items-baseline justify-between mb-3">
-            <p className="text-lg font-semibold text-white">{lastSession.block_name}</p>
-            <p className="text-sm" style={{ color: '#9CA3AF' }}>{relativeDate(lastSession.date)}</p>
+            <p className="text-lg font-semibold" style={{ color: C.text }}>{lastSession.block_name}</p>
+            <p className="text-sm" style={{ color: C.muted }}>{relativeDate(lastSession.date)}</p>
           </div>
           {lastSession.exercises.length > 0 && (
             <div className="space-y-1.5">
               {lastSession.exercises.map((ex, i) => (
                 <div key={i} className="flex items-center justify-between">
-                  <span className="text-sm" style={{ color: '#9CA3AF' }}>{ex.name}</span>
-                  <span className="text-sm font-semibold" style={{ color: '#3B82F6' }}>
+                  <span className="text-sm" style={{ color: C.muted }}>{ex.name}</span>
+                  <span className="text-sm font-semibold" style={{ color: C.accent }}>
                     {ex.weight != null ? `${ex.weight} lbs` : 'BW'} &times; {ex.reps}
                   </span>
                 </div>

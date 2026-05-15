@@ -22,13 +22,13 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: '#0F0F0F',
+  themeColor: '#1C1814',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={inter.className}>
-      <body className="min-h-screen text-white antialiased" style={{ backgroundColor: '#0F0F0F' }}>
+      <body className="min-h-screen antialiased" style={{ backgroundColor: '#1C1814', color: '#F5F0E8' }}>
         <main className="pb-20">{children}</main>
         <BottomNav />
         <SwRegister />
