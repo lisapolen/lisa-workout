@@ -5,8 +5,8 @@ interface Props {
 }
 
 const C = {
-  card:   '#252018',
-  item:   '#2E2820',
+  card:   '#2D2520',
+  item:   '#352D26',
   text:   '#F5F0E8',
   muted:  '#A89880',
   accent: '#C4714A',

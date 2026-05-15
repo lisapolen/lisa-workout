@@ -6,12 +6,20 @@ import { Block, VO2maxLog } from '@/lib/types'
 
 const C = {
   bg:        '#1C1814',
-  card:      '#252018',
+  card:      '#2D2520',
   border:    '#3A3228',
   text:      '#F5F0E8',
   muted:     '#A89880',
   accent:    '#C4714A',
   success:   '#6B8F6B',
+}
+
+const BLOCK_ACCENT: Record<string, string> = {
+  'Lower Body': '#C4714A',
+  'Upper Body': '#6B9E8F',
+  'Cardio':     '#C4A44A',
+  'Core':       '#9E8B6B',
+  'Recovery':   '#8A7FA8',
 }
 
 const BLOCK_LABEL: Record<string, string> = {
@@ -96,7 +104,7 @@ export default function HomePage() {
             key={block.id}
             href={`/block/${block.id}`}
             className="flex items-center gap-4 p-5 rounded-2xl active:opacity-80"
-            style={{ backgroundColor: C.card, borderLeft: `3px solid ${C.accent}` }}
+            style={{ backgroundColor: C.card, borderLeft: `3px solid ${BLOCK_ACCENT[block.name] ?? C.accent}` }}
           >
             <div className="flex-1">
               <p className="text-xs uppercase tracking-wider mb-0.5" style={{ color: C.muted }}>

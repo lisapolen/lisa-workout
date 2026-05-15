@@ -8,13 +8,21 @@ import NeckSafetyModal from '@/components/NeckSafetyModal'
 
 const C = {
   bg:      '#1C1814',
-  card:    '#252018',
+  card:    '#2D2520',
   border:  '#3A3228',
   text:    '#F5F0E8',
   muted:   '#A89880',
   accent:  '#C4714A',
   success: '#6B8F6B',
   danger:  '#C4514A',
+}
+
+const BLOCK_ACCENT: Record<string, string> = {
+  'Lower Body': '#C4714A',
+  'Upper Body': '#6B9E8F',
+  'Cardio':     '#C4A44A',
+  'Core':       '#9E8B6B',
+  'Recovery':   '#8A7FA8',
 }
 
 // ─── Cardio ─────────────────────────────────────────────────────────────────
@@ -317,11 +325,13 @@ function StrengthView({
   lastWeights,
   blockId,
   isUpperBody,
+  accent,
 }: {
   exercises: Exercise[]
   lastWeights: Record<number, number | null>
   blockId: number
   isUpperBody: boolean
+  accent: string
 }) {
   const [showNeck, setShowNeck] = useState(false)
 
@@ -335,6 +345,7 @@ function StrengthView({
         >
           <span className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-bold" style={{ borderColor: C.danger }}>!</span>
           Neck Safety Reference
+
         </button>
       )}
 
@@ -350,7 +361,7 @@ function StrengthView({
               style={{
                 backgroundColor: C.card,
                 border: `1px solid ${C.border}`,
-                borderLeft: `3px solid ${C.accent}`,
+                borderLeft: `3px solid ${accent}`,
               }}
             >
               <div className="flex items-start justify-between">
@@ -378,7 +389,7 @@ function StrengthView({
                   {isBodyweight ? (
                     <p className="text-sm" style={{ color: C.muted }}>Bodyweight</p>
                   ) : lastW !== null && lastW !== undefined ? (
-                    <p className="font-bold" style={{ color: C.accent }}>{lastW} lbs</p>
+                    <p className="font-bold" style={{ color: accent }}>{lastW} lbs</p>
                   ) : ex.starting_weight ? (
                     <p className="text-sm" style={{ color: C.muted }}>{ex.starting_weight}</p>
                   ) : (
@@ -450,13 +461,15 @@ export default function BlockPage() {
   }
 
   const isUpperBody = block.name === 'Upper Body'
+  const accent = BLOCK_ACCENT[block.name] ?? C.accent
 
   return (
     <div className="px-4 pt-6 max-w-lg mx-auto">
       <button onClick={() => router.push('/')} className="text-sm mb-4 flex items-center gap-1" style={{ color: C.muted }}>
         &lsaquo; Home
       </button>
-      <h1 className="text-3xl font-bold mb-6" style={{ color: C.text }}>{block.name}</h1>
+      <h1 className="text-3xl font-bold mb-2" style={{ color: C.text }}>{block.name}</h1>
+      <div className="h-1 w-12 rounded-full mb-6" style={{ backgroundColor: accent }} />
 
       {(block.type === 'strength' || block.type === 'core') && (
         <StrengthView
@@ -464,6 +477,7 @@ export default function BlockPage() {
           lastWeights={lastWeights}
           blockId={blockId}
           isUpperBody={isUpperBody}
+          accent={accent}
         />
       )}
       {block.type === 'cardio' && <CardioView blockId={blockId} />}

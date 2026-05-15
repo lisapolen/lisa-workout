@@ -9,7 +9,7 @@ import { Exercise, CardioLog, VO2maxLog } from '@/lib/types'
 
 const C = {
   bg:      '#1C1814',
-  card:    '#252018',
+  card:    '#2D2520',
   border:  '#3A3228',
   text:    '#F5F0E8',
   muted:   '#A89880',
