@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from 'next'
-import { Geist } from 'next/font/google'
+import { Inter } from 'next/font/google'
 import './globals.css'
 import BottomNav from '@/components/BottomNav'
 import SwRegister from '@/components/SwRegister'
 
-const geist = Geist({ subsets: ['latin'] })
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Workout',
@@ -22,13 +22,13 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: '#09090b',
+  themeColor: '#0F0F0F',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={geist.className}>
-      <body className="min-h-screen bg-zinc-950 text-white antialiased">
+    <html lang="en" className={inter.className}>
+      <body className="min-h-screen text-white antialiased" style={{ backgroundColor: '#0F0F0F' }}>
         <main className="pb-20">{children}</main>
         <BottomNav />
         <SwRegister />

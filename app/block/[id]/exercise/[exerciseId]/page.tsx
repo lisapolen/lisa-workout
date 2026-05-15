@@ -42,7 +42,8 @@ function Stepper({ label, value, onChange, step, min = 0, unit }: StepperProps) 
         <button
           type="button"
           onPointerDown={() => adjust(-step)}
-          className="w-16 bg-zinc-800 rounded-2xl text-3xl font-bold text-white flex items-center justify-center border border-zinc-700 active:bg-zinc-700 select-none"
+          className="w-16 rounded-2xl text-3xl font-bold text-white flex items-center justify-center border active:opacity-70 select-none"
+          style={{ backgroundColor: '#1A1A1A', borderColor: '#374151' }}
         >
           -
         </button>
@@ -51,12 +52,14 @@ function Stepper({ label, value, onChange, step, min = 0, unit }: StepperProps) 
           inputMode="decimal"
           value={value}
           onChange={e => onChange(e.target.value)}
-          className="flex-1 bg-zinc-800 rounded-xl text-4xl font-bold text-center py-4 border-2 border-zinc-700 focus:border-amber-400 outline-none"
+          className="flex-1 rounded-xl text-4xl font-bold text-center py-4 outline-none text-white"
+          style={{ backgroundColor: '#1A1A1A', border: '2px solid #374151' }}
         />
         <button
           type="button"
           onPointerDown={() => adjust(step)}
-          className="w-16 bg-zinc-800 rounded-2xl text-3xl font-bold text-white flex items-center justify-center border border-zinc-700 active:bg-zinc-700 select-none"
+          className="w-16 rounded-2xl text-3xl font-bold text-white flex items-center justify-center border active:opacity-70 select-none"
+          style={{ backgroundColor: '#1A1A1A', borderColor: '#374151' }}
         >
           +
         </button>
@@ -255,17 +258,17 @@ export default function SetLoggerPage() {
 
       {/* Overload prompt */}
       {showOverloadPrompt && (
-        <div className="bg-green-950 border border-green-700 rounded-2xl p-4 mb-4 flex items-start gap-3">
-          <span className="text-green-400 text-xl mt-0.5">&#8593;</span>
+        <div className="rounded-2xl p-4 mb-4 flex items-start gap-3" style={{ backgroundColor: 'rgba(59,130,246,0.1)', border: '1px solid #3B82F6' }}>
+          <span className="text-xl mt-0.5" style={{ color: '#3B82F6' }}>&#8593;</span>
           <div className="flex-1">
-            <p className="text-green-300 font-semibold text-sm">
+            <p className="font-semibold text-sm text-white">
               Ready to increase weight on {exercise.name}
             </p>
-            <p className="text-green-500 text-xs mt-0.5">
+            <p className="text-xs mt-0.5" style={{ color: '#9CA3AF' }}>
               Try adding 2.5&ndash;5 lbs next session
             </p>
           </div>
-          <button onClick={dismissOverload} className="text-green-600 text-xl leading-none px-1">
+          <button onClick={dismissOverload} className="text-xl leading-none px-1" style={{ color: '#9CA3AF' }}>
             &times;
           </button>
         </div>
@@ -277,23 +280,23 @@ export default function SetLoggerPage() {
 
       {/* Neck flag */}
       {exercise.neck_flag && (
-        <div className="bg-red-950 border border-red-700 rounded-xl p-3 mb-4">
-          <p className="text-red-400 font-semibold text-sm">
+        <div className="rounded-xl p-3 mb-4" style={{ backgroundColor: 'rgba(239,68,68,0.1)', border: '1px solid #EF4444' }}>
+          <p className="font-semibold text-sm" style={{ color: '#EF4444' }}>
             Neck-flagged &mdash; go light, stop if neck engages
           </p>
         </div>
       )}
 
       {/* Last weight */}
-      <div className="bg-zinc-900 rounded-xl p-4 mb-5 border border-zinc-800">
+      <div className="rounded-xl p-4 mb-5" style={{ backgroundColor: '#1A1A1A' }}>
         {isBodyweight ? (
-          <p className="text-zinc-400">Bodyweight exercise</p>
+          <p style={{ color: '#9CA3AF' }}>Bodyweight exercise</p>
         ) : lastWeight != null ? (
-          <p className="text-lg">
-            Last time: <span className="text-amber-400 font-bold text-xl">{lastWeight} lbs</span>
+          <p className="text-lg text-white">
+            Last time: <span className="font-bold text-xl" style={{ color: '#3B82F6' }}>{lastWeight} lbs</span>
           </p>
         ) : (
-          <p className="text-zinc-400">No previous weight &mdash; enter today&apos;s weight</p>
+          <p style={{ color: '#9CA3AF' }}>No previous weight &mdash; enter today&apos;s weight</p>
         )}
       </div>
 
@@ -344,7 +347,8 @@ export default function SetLoggerPage() {
           <button
             onClick={logSet}
             disabled={saving || (!isBodyweight && !weight) || !reps}
-            className="w-full bg-amber-400 text-black font-bold text-2xl rounded-2xl py-5 disabled:opacity-40 active:opacity-80"
+            className="w-full text-white font-bold text-2xl rounded-xl py-5 disabled:opacity-40 active:opacity-80"
+            style={{ backgroundColor: '#3B82F6' }}
           >
             {saving ? 'Saving...' : 'Done'}
           </button>

@@ -4,11 +4,12 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { Block, VO2maxLog } from '@/lib/types'
 
-const BLOCK_STYLE: Record<string, string> = {
-  strength: 'bg-blue-950/60 border-blue-800',
-  cardio:   'bg-red-950/60 border-red-800',
-  core:     'bg-green-950/60 border-green-800',
-  recovery: 'bg-teal-950/60 border-teal-800',
+const BLOCK_BG: Record<string, string> = {
+  'Lower Body': '#1D3461',
+  'Upper Body': '#2D2A6E',
+  'Cardio':     '#7F1D1D',
+  'Core':       '#064E3B',
+  'Recovery':   '#1F2937',
 }
 
 const BLOCK_LABEL: Record<string, string> = {
@@ -18,7 +19,6 @@ const BLOCK_LABEL: Record<string, string> = {
   recovery: 'Recovery',
 }
 
-// VO2max clinical scale
 const VO2_MIN = 23
 const VO2_MAX = 40
 function vo2Pct(value: number): number {
@@ -90,7 +90,7 @@ export default function HomePage() {
 
   return (
     <div className="px-4 pt-8 max-w-lg mx-auto">
-      <p className="text-zinc-400 text-sm">{dateStr}</p>
+      <p className="text-sm" style={{ color: '#9CA3AF' }}>{dateStr}</p>
       <h1 className="text-3xl font-bold mt-1 mb-6">What are you doing today?</h1>
 
       {/* Block cards */}
@@ -99,62 +99,63 @@ export default function HomePage() {
           <Link
             key={block.id}
             href={`/block/${block.id}`}
-            className={`flex items-center gap-4 p-5 rounded-2xl border ${BLOCK_STYLE[block.type] ?? 'bg-zinc-900 border-zinc-700'} active:opacity-80`}
+            className="flex items-center gap-4 p-5 rounded-2xl active:opacity-80"
+            style={{ backgroundColor: BLOCK_BG[block.name] ?? '#1A1A1A' }}
           >
             <div className="flex-1">
-              <p className="text-xs text-zinc-400 uppercase tracking-wider mb-0.5">
+              <p className="text-xs uppercase tracking-wider mb-0.5" style={{ color: '#9CA3AF' }}>
                 Block {i + 1} &middot; {BLOCK_LABEL[block.type]}
               </p>
-              <p className="text-xl font-bold">{block.name}</p>
+              <p className="text-xl font-bold text-white">{block.name}</p>
             </div>
-            <span className="text-zinc-400 text-3xl leading-none">&rsaquo;</span>
+            <span className="text-3xl leading-none" style={{ color: '#9CA3AF' }}>&rsaquo;</span>
           </Link>
         ))}
       </div>
 
       {/* VO2max widget */}
       {vo2max && (
-        <div className="bg-zinc-900 rounded-2xl p-5 mb-4 border border-zinc-800">
+        <div className="rounded-2xl p-5 mb-4" style={{ backgroundColor: '#1A1A1A' }}>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-zinc-200">VO&#x2082;max</h2>
-            <span className="text-xs text-zinc-500">Updated {relativeDate(vo2max.date)}</span>
+            <h2 className="font-semibold text-white">VO&#x2082;max</h2>
+            <span className="text-xs" style={{ color: '#9CA3AF' }}>Updated {relativeDate(vo2max.date)}</span>
           </div>
           <div className="flex items-baseline gap-2 mb-3">
-            <span className="text-5xl font-bold">{vo2max.value}</span>
-            <span className="text-zinc-400">/ 34 goal</span>
+            <span className="text-5xl font-bold text-white">{vo2max.value}</span>
+            <span style={{ color: '#9CA3AF' }}>/ 34 goal</span>
           </div>
-          <div className="w-full bg-zinc-800 rounded-full h-3 mb-1">
+          <div className="w-full rounded-full h-3 mb-1" style={{ backgroundColor: '#374151' }}>
             <div
-              className="bg-amber-400 h-3 rounded-full transition-all"
-              style={{ width: `${vo2Pct(Number(vo2max.value)).toFixed(1)}%` }}
+              className="h-3 rounded-full transition-all"
+              style={{ width: `${vo2Pct(Number(vo2max.value)).toFixed(1)}%`, backgroundColor: '#3B82F6' }}
             />
           </div>
           <div className="flex justify-between mt-1">
-            <span className="text-xs text-zinc-500">23 (low)</span>
-            <span className="text-xs text-amber-400">Target: 34</span>
-            <span className="text-xs text-zinc-500">40 (athlete)</span>
+            <span className="text-xs" style={{ color: '#9CA3AF' }}>23 (low)</span>
+            <span className="text-xs font-semibold" style={{ color: '#3B82F6' }}>Target: 34</span>
+            <span className="text-xs" style={{ color: '#9CA3AF' }}>40 (athlete)</span>
           </div>
         </div>
       )}
 
       {/* Last session */}
       {lastSession === false ? (
-        <div className="bg-zinc-900 rounded-2xl p-5 border border-zinc-800 text-center">
-          <p className="text-zinc-400">No sessions logged yet &mdash; get started!</p>
+        <div className="rounded-2xl p-5 text-center" style={{ backgroundColor: '#1A1A1A' }}>
+          <p style={{ color: '#9CA3AF' }}>No sessions logged yet &mdash; get started!</p>
         </div>
       ) : lastSession ? (
-        <div className="bg-zinc-900 rounded-2xl p-4 border border-zinc-800">
-          <p className="text-xs text-zinc-500 uppercase tracking-wider mb-1">Last session</p>
+        <div className="rounded-2xl p-4" style={{ backgroundColor: '#1A1A1A' }}>
+          <p className="text-xs uppercase tracking-wider mb-1" style={{ color: '#9CA3AF' }}>Last session</p>
           <div className="flex items-baseline justify-between mb-3">
-            <p className="text-lg font-semibold">{lastSession.block_name}</p>
-            <p className="text-zinc-400 text-sm">{relativeDate(lastSession.date)}</p>
+            <p className="text-lg font-semibold text-white">{lastSession.block_name}</p>
+            <p className="text-sm" style={{ color: '#9CA3AF' }}>{relativeDate(lastSession.date)}</p>
           </div>
           {lastSession.exercises.length > 0 && (
             <div className="space-y-1.5">
               {lastSession.exercises.map((ex, i) => (
                 <div key={i} className="flex items-center justify-between">
-                  <span className="text-zinc-300 text-sm">{ex.name}</span>
-                  <span className="text-amber-400 text-sm font-semibold">
+                  <span className="text-sm" style={{ color: '#9CA3AF' }}>{ex.name}</span>
+                  <span className="text-sm font-semibold" style={{ color: '#3B82F6' }}>
                     {ex.weight != null ? `${ex.weight} lbs` : 'BW'} &times; {ex.reps}
                   </span>
                 </div>

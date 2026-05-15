@@ -7,14 +7,13 @@
 
 :root {
   color-scheme: dark;
-  --background: #09090b;
+  --background: #0F0F0F;
   --foreground: #ffffff;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
   -webkit-tap-highlight-color: transparent;
 }
 
