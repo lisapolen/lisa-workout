@@ -10,14 +10,14 @@ export default function BottomNav() {
       <Link
         href="/"
         className="flex-1 py-4 text-center font-semibold text-lg transition-colors"
-        style={{ color: pathname === '/' ? '#C4714A' : '#A89880' }}
+        style={{ color: pathname === '/' ? '#C4714A' : '#C4B098' }}
       >
         Home
       </Link>
       <Link
         href="/progress"
         className="flex-1 py-4 text-center font-semibold text-lg transition-colors"
-        style={{ color: pathname.startsWith('/progress') ? '#C4714A' : '#A89880' }}
+        style={{ color: pathname.startsWith('/progress') ? '#C4714A' : '#C4B098' }}
       >
         Progress
       </Link>

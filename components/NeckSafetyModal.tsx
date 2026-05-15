@@ -8,7 +8,7 @@ const C = {
   card:   '#2D2520',
   item:   '#352D26',
   text:   '#F5F0E8',
-  muted:  '#A89880',
+  muted:  '#C4B098',
   accent: '#C4714A',
   danger: '#C4514A',
 }

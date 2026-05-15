@@ -9,7 +9,7 @@ const C = {
   card:      '#2D2520',
   border:    '#3A3228',
   text:      '#F5F0E8',
-  muted:     '#A89880',
+  muted:     '#C4B098',
   accent:    '#C4714A',
   success:   '#6B8F6B',
 }
@@ -55,17 +55,25 @@ export default function HomePage() {
   const [blocks, setBlocks] = useState<Block[]>([])
   const [vo2max, setVo2max] = useState<VO2maxLog | null>(null)
   const [lastSession, setLastSession] = useState<LastSessionInfo | null | false>(undefined as any)
+  const [lastSessionByBlock, setLastSessionByBlock] = useState<Record<number, string>>({})
 
   useEffect(() => {
     async function load() {
-      const [{ data: blocksData }, { data: vo2Data }, { data: sessionData }] = await Promise.all([
+      const [{ data: blocksData }, { data: vo2Data }, { data: sessionData }, { data: allSessions }] = await Promise.all([
         supabase.from('blocks').select('*').order('sort_order'),
         supabase.from('vo2max_log').select('*').order('date', { ascending: false }).limit(1),
         supabase.from('sessions').select('id, date, blocks(name)').order('created_at', { ascending: false }).limit(1).maybeSingle(),
+        supabase.from('sessions').select('block_id, date').not('block_id', 'is', null).order('date', { ascending: false }),
       ])
 
       if (blocksData) setBlocks(blocksData)
       if (vo2Data?.[0]) setVo2max(vo2Data[0])
+
+      const byBlock: Record<number, string> = {}
+      allSessions?.forEach((s: any) => {
+        if (s.block_id && !byBlock[s.block_id]) byBlock[s.block_id] = s.date
+      })
+      setLastSessionByBlock(byBlock)
 
       if (!sessionData) { setLastSession(false); return }
 
@@ -111,6 +119,11 @@ export default function HomePage() {
                 Block {i + 1} &middot; {BLOCK_LABEL[block.type]}
               </p>
               <p className="text-xl font-bold" style={{ color: C.text }}>{block.name}</p>
+              {lastSessionByBlock[block.id] && (
+                <p className="text-xs mt-0.5" style={{ color: C.muted }}>
+                  Last: {relativeDate(lastSessionByBlock[block.id])}
+                </p>
+              )}
             </div>
             <span className="text-3xl leading-none" style={{ color: C.muted }}>&rsaquo;</span>
           </Link>

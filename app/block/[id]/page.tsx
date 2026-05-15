@@ -11,7 +11,7 @@ const C = {
   card:    '#2D2520',
   border:  '#3A3228',
   text:    '#F5F0E8',
-  muted:   '#A89880',
+  muted:   '#C4B098',
   accent:  '#C4714A',
   success: '#6B8F6B',
   danger:  '#C4514A',
@@ -106,14 +106,21 @@ function CardioView({ blockId }: { blockId: number }) {
   if (saved) {
     return (
       <div className="text-center py-16">
-        <p className="text-5xl mb-4" style={{ color: C.success }}>&#10003;</p>
+        <p className="text-5xl mb-4" style={{ color: C.success, animation: 'checkmark-pop 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards' }}>&#10003;</p>
         <p className="text-2xl font-bold mb-2" style={{ color: C.success }}>Session logged!</p>
         <button
           onClick={() => router.push('/')}
-          className="mt-6 font-bold text-lg rounded-xl py-4 px-8"
-          style={{ border: `1px solid ${C.accent}`, color: C.accent, backgroundColor: 'transparent' }}
+          className="mt-6 w-full font-bold text-lg rounded-xl py-4"
+          style={{ backgroundColor: C.accent, color: C.text }}
         >
-          Home
+          Back to Home
+        </button>
+        <button
+          onClick={() => router.push('/progress')}
+          className="mt-3 w-full text-base py-3"
+          style={{ color: C.muted }}
+        >
+          View Progress
         </button>
       </div>
     )
@@ -256,14 +263,21 @@ function RecoveryView({ blockId }: { blockId: number }) {
   if (saved) {
     return (
       <div className="text-center py-16">
-        <p className="text-5xl mb-4" style={{ color: C.success }}>&#10003;</p>
+        <p className="text-5xl mb-4" style={{ color: C.success, animation: 'checkmark-pop 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards' }}>&#10003;</p>
         <p className="text-2xl font-bold mb-2" style={{ color: C.success }}>Recovery logged!</p>
         <button
           onClick={() => router.push('/')}
-          className="mt-6 font-bold text-lg rounded-xl py-4 px-8"
-          style={{ border: `1px solid ${C.accent}`, color: C.accent, backgroundColor: 'transparent' }}
+          className="mt-6 w-full font-bold text-lg rounded-xl py-4"
+          style={{ backgroundColor: C.accent, color: C.text }}
         >
-          Home
+          Back to Home
+        </button>
+        <button
+          onClick={() => router.push('/progress')}
+          className="mt-3 w-full text-base py-3"
+          style={{ color: C.muted }}
+        >
+          View Progress
         </button>
       </div>
     )
@@ -323,12 +337,14 @@ function RecoveryView({ blockId }: { blockId: number }) {
 function StrengthView({
   exercises,
   lastWeights,
+  completedCounts,
   blockId,
   isUpperBody,
   accent,
 }: {
   exercises: Exercise[]
   lastWeights: Record<number, number | null>
+  completedCounts: Record<number, number>
   blockId: number
   isUpperBody: boolean
   accent: string
@@ -340,12 +356,11 @@ function StrengthView({
       {isUpperBody && (
         <button
           onClick={() => setShowNeck(true)}
-          className="mb-4 flex items-center gap-2 text-sm font-semibold"
+          className="mb-4 flex items-center gap-2 text-sm font-semibold py-2"
           style={{ color: C.danger }}
         >
-          <span className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-bold" style={{ borderColor: C.danger }}>!</span>
+          <span className="w-11 h-11 rounded-full border-2 flex items-center justify-center text-base font-bold flex-shrink-0" style={{ borderColor: C.danger }}>!</span>
           Neck Safety Reference
-
         </button>
       )}
 
@@ -353,6 +368,10 @@ function StrengthView({
         {exercises.map(ex => {
           const lastW = lastWeights[ex.id]
           const isBodyweight = ex.starting_weight === 'Bodyweight'
+          const doneCount = completedCounts[ex.id] ?? 0
+          const totalSets = ex.sets ?? 0
+          const isComplete = doneCount >= totalSets && totalSets > 0
+          const isPartial = doneCount > 0 && !isComplete
           return (
             <Link
               key={ex.id}
@@ -361,12 +380,12 @@ function StrengthView({
               style={{
                 backgroundColor: C.card,
                 border: `1px solid ${C.border}`,
-                borderLeft: `3px solid ${accent}`,
+                borderLeft: `3px ${isPartial ? 'dashed' : 'solid'} ${accent}`,
               }}
             >
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <p className="text-lg font-bold" style={{ color: C.text }}>{ex.name}</p>
                     {ex.neck_flag && (
                       <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(196,81,74,0.15)', border: `1px solid ${C.danger}`, color: C.danger }}>
@@ -376,7 +395,7 @@ function StrengthView({
                     {isUpperBody && !ex.neck_flag && (
                       <button
                         onClick={(e) => { e.preventDefault(); setShowNeck(true) }}
-                        className="w-5 h-5 rounded-full border text-xs flex items-center justify-center leading-none"
+                        className="w-11 h-11 rounded-full border flex items-center justify-center text-sm font-bold leading-none flex-shrink-0"
                         style={{ borderColor: C.danger, color: C.danger }}
                       >
                         !
@@ -385,15 +404,33 @@ function StrengthView({
                   </div>
                   <p className="text-sm" style={{ color: C.muted }}>{ex.sets} &times; {ex.reps}</p>
                 </div>
-                <div className="text-right ml-4">
-                  {isBodyweight ? (
+                <div className="text-right ml-4 flex flex-col items-end gap-1">
+                  {isComplete ? (
+                    <span
+                      className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-sm"
+                      style={{
+                        backgroundColor: `${accent}30`,
+                        color: accent,
+                        animation: 'pop-in 0.35s cubic-bezier(0.34,1.56,0.64,1) both',
+                      }}
+                    >
+                      ✓
+                    </span>
+                  ) : isPartial ? (
+                    <span
+                      className="text-xs font-bold px-2 py-0.5 rounded-full"
+                      style={{ backgroundColor: `${accent}25`, color: accent }}
+                    >
+                      {doneCount}/{totalSets}
+                    </span>
+                  ) : isBodyweight ? (
                     <p className="text-sm" style={{ color: C.muted }}>Bodyweight</p>
                   ) : lastW !== null && lastW !== undefined ? (
                     <p className="font-bold" style={{ color: accent }}>{lastW} lbs</p>
                   ) : ex.starting_weight ? (
                     <p className="text-sm" style={{ color: C.muted }}>{ex.starting_weight}</p>
                   ) : (
-                    <p className="text-xs" style={{ color: C.border }}>No weight yet</p>
+                    <p className="text-xs" style={{ color: C.muted }}>No weight yet</p>
                   )}
                   <span className="text-2xl leading-none" style={{ color: C.border }}>&rsaquo;</span>
                 </div>
@@ -418,6 +455,7 @@ export default function BlockPage() {
   const [block, setBlock] = useState<Block | null>(null)
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [lastWeights, setLastWeights] = useState<Record<number, number | null>>({})
+  const [completedCounts, setCompletedCounts] = useState<Record<number, number>>({})
 
   useEffect(() => {
     async function load() {
@@ -451,6 +489,21 @@ export default function BlockPage() {
           })
           setLastWeights(map)
         }
+
+        // Check today's session for completion indicators
+        const today = new Date().toISOString().split('T')[0]
+        const sessionId = localStorage.getItem(`session_${blockId}_${today}`)
+        if (sessionId) {
+          const { data: todaySets } = await supabase
+            .from('sets_log')
+            .select('exercise_id')
+            .eq('session_id', Number(sessionId))
+          const counts: Record<number, number> = {}
+          todaySets?.forEach((s: { exercise_id: number }) => {
+            counts[s.exercise_id] = (counts[s.exercise_id] || 0) + 1
+          })
+          setCompletedCounts(counts)
+        }
       }
     }
     load()
@@ -475,6 +528,7 @@ export default function BlockPage() {
         <StrengthView
           exercises={exercises}
           lastWeights={lastWeights}
+          completedCounts={completedCounts}
           blockId={blockId}
           isUpperBody={isUpperBody}
           accent={accent}

@@ -12,7 +12,7 @@ const C = {
   card:    '#2D2520',
   border:  '#3A3228',
   text:    '#F5F0E8',
-  muted:   '#A89880',
+  muted:   '#C4B098',
   accent:  '#C4714A',
   success: '#6B8F6B',
   danger:  '#C4514A',
