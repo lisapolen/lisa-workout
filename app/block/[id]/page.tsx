@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { Block, Exercise, SetLog } from '@/lib/types'
+import { getLocalDate } from '@/lib/utils'
 import NeckSafetyModal from '@/components/NeckSafetyModal'
 
 const C = {
@@ -81,7 +82,7 @@ function CardioView({ blockId }: { blockId: number }) {
     if (!selected || saving) return
     setSaving(true)
     try {
-      const today = new Date().toISOString().split('T')[0]
+      const today = getLocalDate()
       const { data: session } = await supabase
         .from('sessions')
         .insert({ date: today, block_id: blockId, notes: `${selected} — ${duration} min` })
@@ -216,7 +217,7 @@ function CardioView({ blockId }: { blockId: number }) {
 
           <button
             onClick={save}
-            disabled={saving}
+            disabled={saving || !duration}
             className="w-full font-bold text-2xl rounded-xl py-5 disabled:opacity-40 active:opacity-80"
             style={{ backgroundColor: C.accent, color: C.text }}
           >
@@ -247,7 +248,7 @@ function RecoveryView({ blockId }: { blockId: number }) {
     if (saving) return
     setSaving(true)
     try {
-      const today = new Date().toISOString().split('T')[0]
+      const today = getLocalDate()
       const summary = checked.length ? checked.join(', ') : 'Recovery'
       await supabase.from('sessions').insert({
         date: today,
@@ -467,22 +468,29 @@ export default function BlockPage() {
         if (exData) {
           setExercises(exData)
           const ids = exData.map((e: Exercise) => e.id)
-          const { data: sets } = await supabase
-            .from('sets_log')
-            .select('exercise_id, weight, completed_at')
-            .in('exercise_id', ids)
-            .order('completed_at', { ascending: false })
-            .limit(200)
 
+          // One query per exercise to get the true last weight (no arbitrary row cap)
+          const weightResults = await Promise.all(
+            ids.map((id: number) =>
+              supabase
+                .from('sets_log')
+                .select('exercise_id, weight')
+                .eq('exercise_id', id)
+                .not('weight', 'is', null)
+                .order('completed_at', { ascending: false })
+                .limit(1)
+                .maybeSingle()
+            )
+          )
           const map: Record<number, number | null> = {}
-          sets?.forEach((s: { exercise_id: number; weight: number | null }) => {
-            if (!(s.exercise_id in map)) map[s.exercise_id] = s.weight
+          weightResults.forEach(({ data }) => {
+            if (data) map[data.exercise_id] = data.weight
           })
           setLastWeights(map)
         }
 
         // Check today's session for completion indicators
-        const today = new Date().toISOString().split('T')[0]
+        const today = getLocalDate()
         const sessionId = localStorage.getItem(`session_${blockId}_${today}`)
         if (sessionId) {
           const { data: todaySets } = await supabase

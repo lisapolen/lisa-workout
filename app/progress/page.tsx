@@ -50,17 +50,24 @@ function StrengthTab() {
 
   useEffect(() => {
     supabase
-      .from('exercises')
-      .select('*')
-      .in('block_id', [1, 2, 4])
-      .order('block_id')
-      .order('sort_order')
-      .then(({ data }) => {
-        if (data) {
-          setExercises(data)
-          const lp = data.find((e: Exercise) => e.name === 'Seated Leg Press')
-          if (lp) setSelected(lp.id)
-        }
+      .from('blocks')
+      .select('id')
+      .in('type', ['strength', 'core'])
+      .then(({ data: blockRows }) => {
+        if (!blockRows || blockRows.length === 0) return
+        const ids = blockRows.map((b: any) => b.id)
+        supabase
+          .from('exercises')
+          .select('*')
+          .in('block_id', ids)
+          .order('block_id')
+          .order('sort_order')
+          .then(({ data }) => {
+            if (data && data.length > 0) {
+              setExercises(data)
+              setSelected(data[0].id)
+            }
+          })
       })
   }, [])
 

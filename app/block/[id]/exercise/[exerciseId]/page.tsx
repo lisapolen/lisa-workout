@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Exercise, SetLog } from '@/lib/types'
+import { getLocalDate } from '@/lib/utils'
 import NeckSafetyModal from '@/components/NeckSafetyModal'
 import { Toast } from '@/components/Toast'
 
@@ -185,6 +186,29 @@ export default function SetLoggerPage() {
         if (blk.name === 'Upper Body') setIsUpperBody(true)
       }
 
+      // Resume any sets already logged in today's session
+      const today = getLocalDate()
+      const sessionId = localStorage.getItem(`session_${blockId}_${today}`)
+      if (sessionId) {
+        const { data: existingSets } = await supabase
+          .from('sets_log')
+          .select('*')
+          .eq('session_id', Number(sessionId))
+          .eq('exercise_id', exerciseId)
+          .order('set_number')
+        if (existingSets && existingSets.length > 0) {
+          setCompletedSets(existingSets)
+          setCurrentSet(existingSets[existingSets.length - 1].set_number + 1)
+          // Use weight from last logged set as default
+          const lastLoggedWeight = existingSets[existingSets.length - 1].weight
+          if (lastLoggedWeight != null) {
+            setLastWeight(lastLoggedWeight)
+            setWeight(String(lastLoggedWeight))
+            return
+          }
+        }
+      }
+
       const { data: lastSet } = await supabase
         .from('sets_log').select('weight').eq('exercise_id', exerciseId)
         .not('weight', 'is', null).order('completed_at', { ascending: false }).limit(1).maybeSingle()
@@ -221,7 +245,7 @@ export default function SetLoggerPage() {
   }, [elapsed, blockName, restStartTime])
 
   async function getOrCreateSession(): Promise<number> {
-    const today = new Date().toISOString().split('T')[0]
+    const today = getLocalDate()
     const key = `session_${blockId}_${today}`
     const stored = localStorage.getItem(key)
     if (stored) return Number(stored)
@@ -260,7 +284,7 @@ export default function SetLoggerPage() {
   function maybeFireEasterEgg(loggedWeight: number | null) {
     const eggs = getEasterEggs()
     const hour = new Date().getHours()
-    const today = new Date().toISOString().split('T')[0]
+    const today = getLocalDate()
     const blockAccent = BLOCK_ACCENT[blockName] ?? C.accent
 
     if (!eggs.first_set && lastWeight === null && completedSets.length === 0) {
@@ -337,8 +361,7 @@ export default function SetLoggerPage() {
       maybeFireEasterEgg(loggedWeight)
 
       if (loggedWeight != null) {
-        const today = new Date().toISOString().split('T')[0]
-        const currentSessionId = localStorage.getItem(`session_${blockId}_${today}`)
+        const currentSessionId = localStorage.getItem(`session_${blockId}_${getLocalDate()}`)
         await runOverloadCheck(exercise, loggedWeight, currentSessionId)
       }
     } catch {
