@@ -169,13 +169,29 @@ export default function PlansPage() {
             )
           })}
         </div>
-        <Link
-          href="/plans/new"
-          className="block w-full text-center py-4 rounded-2xl font-semibold text-lg active:opacity-80"
-          style={{ backgroundColor: PLAN_ACCENT, color: C.text }}
-        >
-          + New plan
-        </Link>
+        <div className="flex justify-end mb-2">
+          <Link
+            href="/plans/new"
+            className="text-sm font-semibold px-4 py-2 rounded-full active:opacity-80"
+            style={{ border: `1px solid ${PLAN_ACCENT}`, color: PLAN_ACCENT }}
+          >
+            + New plan
+          </Link>
+        </div>
+        <div className="pt-4 mt-2" style={{ borderTop: `1px solid ${C.border}` }}>
+          <Link
+            href="/plans/audit"
+            className="flex items-center gap-3 active:opacity-80"
+          >
+            <div className="flex-1">
+              <p className="font-semibold text-sm" style={{ color: C.text }}>Audit my program</p>
+              <p className="text-xs mt-0.5" style={{ color: C.muted }}>Claude reviews your last 6 weeks and suggests changes</p>
+            </div>
+            <span className="text-xs px-3 py-1.5 rounded-lg" style={{ border: `1px solid ${C.border}`, color: C.muted }}>
+              Review
+            </span>
+          </Link>
+        </div>
         </>
       )}
     </div>
