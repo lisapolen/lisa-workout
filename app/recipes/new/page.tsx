@@ -81,7 +81,7 @@ export default function NewRecipePage() {
   const canSave = name.trim().length > 0 && selected.length > 0
 
   return (
-    <div className="px-4 pt-6 pb-28 max-w-lg mx-auto">
+    <div className="px-4 pt-6 pb-40 max-w-lg mx-auto">
       <button onClick={() => router.push('/recipes')} className="text-sm mb-4" style={{ color: C.muted }}>
         &lsaquo; Recipes
       </button>
@@ -185,8 +185,8 @@ export default function NewRecipePage() {
       <div className="h-24" />
       {error && <p className="text-sm mb-3" style={{ color: C.danger }}>{error}</p>}
 
-      <div className="fixed bottom-0 left-0 right-0 px-4 pb-safe z-40" style={{ backgroundColor: C.bg }}>
-        <div className="max-w-lg mx-auto py-3">
+      <div className="fixed bottom-16 left-0 right-0 px-4 z-[60]" style={{ backgroundColor: C.bg }}>
+        <div className="max-w-lg mx-auto py-3 border-t" style={{ borderColor: C.border }}>
           <button onClick={save} disabled={!canSave || saving}
             className="w-full py-5 rounded-2xl font-bold text-xl disabled:opacity-40 active:opacity-80"
             style={{ backgroundColor: PLAN_ACCENT, color: C.text }}>
