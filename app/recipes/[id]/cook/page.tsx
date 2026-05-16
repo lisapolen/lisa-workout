@@ -18,11 +18,11 @@ const C = {
 const PLAN_ACCENT = '#A87FA8'
 
 const REST_TARGET: Record<string, number> = {
-  'Lower Body': 120,
-  'Upper Body': 90,
-  'Core': 60,
+  'Lower Body': 30,
+  'Upper Body': 30,
+  'Core': 30,
 }
-const ROUND_REST = 90
+const ROUND_REST = 30
 
 const ROUND_PUNS = ['simmer down', 'letting it rest', 'marinating']
 
@@ -324,22 +324,19 @@ export default function CookPage() {
 
   // ─── Rest (straight sets) ───
   if (phase === 'rest') {
-    const restTarget = REST_TARGET[exercises[exerciseIndex]?.blockName ?? ''] ?? 90
-    const restLabel = restElapsed >= 120 ? "The pot's been on a while." : 'Rest'
+    const restTarget = REST_TARGET[exercises[exerciseIndex]?.blockName ?? ''] ?? 30
     const timeLeft = Math.max(0, restTarget - restElapsed)
     return (
       <div className="flex flex-col items-center justify-center min-h-screen px-6" style={{ backgroundColor: C.bg }}>
-        <p className="text-sm mb-8" style={{ color: C.muted }}>{restLabel}</p>
-        <p className="text-6xl font-bold tabular-nums mb-4" style={{ color: timeLeft === 0 ? PLAN_ACCENT : C.text }}>
+        <p className="text-sm mb-8" style={{ color: C.muted }}>Rest</p>
+        <p className="text-6xl font-bold tabular-nums mb-10" style={{ color: timeLeft === 0 ? PLAN_ACCENT : C.text }}>
           {timeLeft}s
         </p>
-        {timeLeft === 0 && (
-          <button onClick={advanceAfterRest}
-            className="mt-4 px-6 py-3 rounded-xl font-semibold active:opacity-80"
-            style={{ backgroundColor: PLAN_ACCENT, color: C.text }}>
-            Continue
-          </button>
-        )}
+        <button onClick={advanceAfterRest}
+          className="px-10 py-4 rounded-2xl font-bold text-xl active:opacity-80"
+          style={{ backgroundColor: PLAN_ACCENT, color: C.text }}>
+          Done
+        </button>
       </div>
     )
   }
