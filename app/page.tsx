@@ -109,6 +109,7 @@ export default function HomePage() {
   const [plans, setPlans] = useState<Plan[]>([])
   const [lastSessionByPlan, setLastSessionByPlan] = useState<Record<number, string>>({})
   const [weekDonePlans, setWeekDonePlans] = useState<Set<number>>(new Set())
+  const [plansNudgeDismissed, setPlansNudgeDismissed] = useState(true) // true by default to avoid flash
 
   // Toast
   const [toast, setToast] = useState<{ message: string; accent?: string } | null>(null)
@@ -143,6 +144,7 @@ export default function HomePage() {
         supabase.from('sessions').select('plan_id, date').not('plan_id', 'is', null).order('date', { ascending: false }),
       ])
 
+      setPlansNudgeDismissed(!!localStorage.getItem('plans_nudge_dismissed'))
       if (blocksData) setBlocks(blocksData)
       if (vo2Data?.[0]) setVo2max(vo2Data[0])
 
@@ -308,6 +310,38 @@ export default function HomePage() {
           </Link>
         ))}
       </div>
+
+      {/* Plans nudge — shown once when no plans exist */}
+      {plans.length === 0 && !plansNudgeDismissed && (
+        <div
+          className="rounded-2xl p-4 mb-5 flex items-start gap-3"
+          style={{ backgroundColor: '#1E1826', border: '1px solid #A87FA840', borderLeft: '3px solid #A87FA8' }}
+        >
+          <div className="flex-1">
+            <p className="font-semibold text-sm mb-0.5" style={{ color: '#F5F0E8' }}>Mix it up with Plans</p>
+            <p className="text-xs" style={{ color: '#C4B098' }}>
+              Build a custom workout from exercises across your blocks — like Push Day or Plan A — and rotate through them across the week.
+            </p>
+            <Link
+              href="/plans/new"
+              className="inline-block mt-2 text-xs font-semibold"
+              style={{ color: '#A87FA8' }}
+            >
+              Create a plan →
+            </Link>
+          </div>
+          <button
+            onClick={() => {
+              localStorage.setItem('plans_nudge_dismissed', '1')
+              setPlansNudgeDismissed(true)
+            }}
+            className="text-xl leading-none px-1 pt-0.5 flex-shrink-0"
+            style={{ color: '#C4B098' }}
+          >
+            &times;
+          </button>
+        </div>
+      )}
 
       {/* Plans section */}
       {plans.length > 0 && (

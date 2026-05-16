@@ -94,14 +94,16 @@ export default function PlansPage() {
 
       {plans.length === 0 ? (
         <div className="rounded-2xl p-8 text-center mb-6" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
-          <p className="font-semibold mb-1" style={{ color: C.text }}>No plans yet</p>
-          <p className="text-sm mb-4" style={{ color: C.muted }}>Build a plan from your exercise library.</p>
+          <p className="font-semibold mb-2" style={{ color: C.text }}>No plans yet</p>
+          <p className="text-sm mb-6" style={{ color: C.muted }}>
+            Save a mix of exercises from your blocks as a named Plan — like Push Day or Plan A — then rotate through 2–3 plans across the week.
+          </p>
           <Link
             href="/plans/new"
             className="inline-block px-6 py-3 rounded-xl font-semibold"
             style={{ backgroundColor: PLAN_ACCENT, color: C.text }}
           >
-            New plan
+            Create your first plan
           </Link>
         </div>
       ) : (
