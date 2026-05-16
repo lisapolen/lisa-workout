@@ -382,6 +382,15 @@ export default function CookPage() {
         <p className="text-sm" style={{ color: C.muted }}>
           {displayWeight} &nbsp;·&nbsp; {displayReps}
         </p>
+        {currentEx?.description && (
+          <p className="text-sm mt-4 max-w-xs leading-relaxed" style={{ color: C.muted }}>{currentEx.description}</p>
+        )}
+        {currentEx?.video_url && (
+          <a href={currentEx.video_url} target="_blank" rel="noopener noreferrer"
+            className="text-sm mt-2 inline-block" style={{ color: C.accent }}>
+            Watch →
+          </a>
+        )}
         {pun && (
           <p className="text-xs mt-6 italic" style={{ color: PLAN_ACCENT }}>{pun}</p>
         )}
