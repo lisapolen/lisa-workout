@@ -1,3 +1,9 @@
+export interface AppUser {
+  id: number
+  name: string
+  color: string
+}
+
 export interface Block {
   id: number
   name: string
@@ -26,6 +32,7 @@ export interface Session {
   date: string
   block_id: number | null
   plan_id: number | null
+  user_id: number | null
   notes: string | null
   feeling: string | null
   created_at: string

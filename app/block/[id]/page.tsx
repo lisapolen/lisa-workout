@@ -83,12 +83,10 @@ function CardioView({ blockId }: { blockId: number }) {
     const d = new Date()
     d.setDate(d.getDate() - 28)
     const cutoff = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-    supabase
-      .from('cardio_log')
-      .select('id', { count: 'exact', head: true })
-      .eq('type', 'zone2')
-      .gte('date', cutoff)
-      .then(({ count }) => { if (count !== null) setZone2Count(count) })
+    const userId = Number(localStorage.getItem('workout_user_id')) || null
+    let q = supabase.from('cardio_log').select('id', { count: 'exact', head: true }).eq('type', 'zone2').gte('date', cutoff)
+    if (userId) q = q.eq('user_id', userId)
+    q.then(({ count }) => { if (count !== null) setZone2Count(count) })
   }, [])
 
   async function save() {
@@ -96,9 +94,10 @@ function CardioView({ blockId }: { blockId: number }) {
     setSaving(true)
     try {
       const today = getLocalDate()
+      const userId = Number(localStorage.getItem('workout_user_id')) || null
       const { data: session } = await supabase
         .from('sessions')
-        .insert({ date: today, block_id: blockId, notes: `${selected} — ${duration} min` })
+        .insert({ date: today, block_id: blockId, notes: `${selected} — ${duration} min`, user_id: userId })
         .select('id')
         .single()
 
@@ -110,6 +109,7 @@ function CardioView({ blockId }: { blockId: number }) {
         duration_minutes: duration ? Number(duration) : null,
         avg_hr: avgHr ? Number(avgHr) : null,
         notes: notes || null,
+        user_id: userId,
       })
       setSaved(true)
     } finally {

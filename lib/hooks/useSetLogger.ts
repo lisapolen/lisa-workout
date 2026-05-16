@@ -79,10 +79,11 @@ export function useSetLogger({ session, exercise, blockName, lastWeight }: UseSe
     const stored = localStorage.getItem(key)
     if (stored) return Number(stored)
     const feeling = localStorage.getItem(feelingKey(today)) ?? null
+    const userId = Number(localStorage.getItem('workout_user_id')) || null
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const payload: any = session.type === 'block'
-      ? { date: today, block_id: session.blockId, feeling }
-      : { date: today, plan_id: session.planId, block_id: null, feeling }
+      ? { date: today, block_id: session.blockId, feeling, user_id: userId }
+      : { date: today, plan_id: session.planId, block_id: null, feeling, user_id: userId }
     const { data, error } = await supabase.from('sessions').insert(payload).select('id').single()
     if (error || !data) throw new Error('Could not create session')
     localStorage.setItem(key, String(data.id))

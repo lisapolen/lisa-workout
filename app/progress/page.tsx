@@ -7,6 +7,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import { Exercise, CardioLog, VO2maxLog, WalkLog } from '@/lib/types'
 import { getLocalDate } from '@/lib/utils'
+import { useUser } from '@/lib/context/UserContext'
 
 const C = {
   bg:      '#1C1814',
@@ -72,9 +73,11 @@ function dateStr(d: Date): string {
 // ─── Calendar Grid ────────────────────────────────────────────────────────────
 
 function CalendarGrid() {
+  const { userId } = useUser()
   const [sessionMap, setSessionMap] = useState<Record<string, string>>({}) // date → color
 
   useEffect(() => {
+    if (!userId) return
     const cutoff = new Date()
     cutoff.setDate(cutoff.getDate() - 83)
     const cutoffStr = dateStr(cutoff)
@@ -84,6 +87,7 @@ function CalendarGrid() {
       .select('date, blocks(name, type)')
       .gte('date', cutoffStr)
       .not('block_id', 'is', null)
+      .eq('user_id', userId)
       .then(({ data }) => {
         if (!data) return
         const map: Record<string, { color: string; priority: number }> = {}
@@ -171,12 +175,14 @@ function CalendarGrid() {
 // ─── Strength tab ─────────────────────────────────────────────────────────────
 
 function StrengthTab() {
+  const { userId } = useUser()
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [selected, setSelected] = useState<number | null>(null)
   const [history, setHistory] = useState<{ date: string; weight: number }[]>([])
   const [overloadCount, setOverloadCount] = useState<number | null>(null)
 
   useEffect(() => {
+    if (!userId) return
     supabase
       .from('blocks')
       .select('id')
@@ -228,11 +234,12 @@ function StrengthTab() {
   }, [])
 
   useEffect(() => {
-    if (!selected) return
+    if (!selected || !userId) return
     supabase
       .from('sets_log')
-      .select('weight, completed_at, sessions(date)')
+      .select('weight, completed_at, sessions!inner(date)')
       .eq('exercise_id', selected)
+      .eq('sessions.user_id', userId)
       .not('weight', 'is', null)
       .order('completed_at')
       .then(({ data }) => {
@@ -311,16 +318,18 @@ function StrengthTab() {
 // ─── Cardio tab ───────────────────────────────────────────────────────────────
 
 function CardioTab() {
+  const { userId } = useUser()
   const [logs, setLogs] = useState<CardioLog[]>([])
   const [walks, setWalks] = useState<WalkLog[]>([])
 
   useEffect(() => {
+    if (!userId) return
     const cutoff = new Date()
     cutoff.setDate(cutoff.getDate() - 28)
     const cutoffStr = dateStr(cutoff)
     Promise.all([
-      supabase.from('cardio_log').select('*').gte('date', cutoffStr).order('date', { ascending: false }),
-      supabase.from('walks_log').select('*').gte('date', cutoffStr).order('date', { ascending: false }),
+      supabase.from('cardio_log').select('*').gte('date', cutoffStr).eq('user_id', userId).order('date', { ascending: false }),
+      supabase.from('walks_log').select('*').gte('date', cutoffStr).eq('user_id', userId).order('date', { ascending: false }),
     ]).then(([{ data: cardioData }, { data: walkData }]) => {
       if (cardioData) setLogs(cardioData)
       if (walkData) setWalks(walkData)
@@ -393,6 +402,7 @@ function CardioTab() {
 // ─── VO2max tab ───────────────────────────────────────────────────────────────
 
 function VO2maxTab() {
+  const { userId } = useUser()
   const [logs, setLogs] = useState<VO2maxLog[]>([])
   const [newValue, setNewValue] = useState('')
   const [source, setSource] = useState<'manual' | 'apple_watch'>('manual')
@@ -400,14 +410,17 @@ function VO2maxTab() {
   const [zone2Count, setZone2Count] = useState<number | null>(null)
 
   function loadLogs() {
+    if (!userId) return
     supabase
       .from('vo2max_log')
       .select('*')
+      .eq('user_id', userId)
       .order('date')
       .then(({ data }) => { if (data) setLogs(data) })
   }
 
   useEffect(() => {
+    if (!userId) return
     loadLogs()
     const cutoff = new Date()
     cutoff.setDate(cutoff.getDate() - 28)
@@ -415,17 +428,19 @@ function VO2maxTab() {
       .from('cardio_log')
       .select('id', { count: 'exact', head: true })
       .eq('type', 'zone2')
+      .eq('user_id', userId)
       .gte('date', dateStr(cutoff))
       .then(({ count }) => { if (count !== null) setZone2Count(count) })
-  }, [])
+  }, [userId])
 
   async function addEntry() {
-    if (!newValue || saving) return
+    if (!newValue || saving || !userId) return
     setSaving(true)
     await supabase.from('vo2max_log').insert({
       date: getLocalDate(),
       value: Number(newValue),
       source,
+      user_id: userId,
     })
     setNewValue('')
     loadLogs()

@@ -4,7 +4,8 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Plan } from '@/lib/types'
-import { getLocalDate, getMondayOfWeek, relativeDate } from '@/lib/utils'
+import { getMondayOfWeek, relativeDate } from '@/lib/utils'
+import { useUser } from '@/lib/context/UserContext'
 
 const C = {
   bg:      '#1C1814',
@@ -20,6 +21,7 @@ const PLAN_ACCENT = '#A87FA8'
 
 export default function RecipesPage() {
   const router = useRouter()
+  const { userId } = useUser()
   const [recipes, setRecipes] = useState<Plan[]>([])
   const [lastSessionByRecipe, setLastSessionByRecipe] = useState<Record<number, string>>({})
   const [weekDoneRecipes, setWeekDoneRecipes] = useState<Set<number>>(new Set())
@@ -34,11 +36,12 @@ export default function RecipesPage() {
   }, [confirmDelete])
 
   useEffect(() => {
+    if (!userId) return
     async function load() {
       const monday = getMondayOfWeek()
       const [{ data: recipeData }, { data: sessionData }] = await Promise.all([
-        supabase.from('plans').select('*').order('sort_order'),
-        supabase.from('sessions').select('plan_id, date').not('plan_id', 'is', null).order('date', { ascending: false }),
+        supabase.from('plans').select('*').eq('user_id', userId).order('sort_order'),
+        supabase.from('sessions').select('plan_id, date').not('plan_id', 'is', null).eq('user_id', userId).order('date', { ascending: false }),
       ])
       setRecipes(recipeData ?? [])
       const lastByRecipe: Record<number, string> = {}
@@ -52,7 +55,7 @@ export default function RecipesPage() {
       setWeekDoneRecipes(weekDone)
     }
     load()
-  }, [])
+  }, [userId])
 
   async function deleteRecipe(recipeId: number) {
     await supabase.from('plans').delete().eq('id', recipeId)

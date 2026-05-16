@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Exercise } from '@/lib/types'
+import { useUser } from '@/lib/context/UserContext'
 
 const C = {
   bg:      '#1C1814',
@@ -24,6 +25,7 @@ type RecipeType = 'straight' | 'circuit'
 
 export default function NewRecipePage() {
   const router = useRouter()
+  const { userId } = useUser()
   const [name, setName] = useState('')
   const [recipeType, setRecipeType] = useState<RecipeType>('straight')
   const [rounds, setRounds] = useState(3)
@@ -63,7 +65,7 @@ export default function NewRecipePage() {
     setError('')
     try {
       const { data: recipe, error: recipeError } = await supabase
-        .from('plans').insert({ name: name.trim(), sort_order: 0, type: recipeType, rounds }).select('id').single()
+        .from('plans').insert({ name: name.trim(), sort_order: 0, type: recipeType, rounds, user_id: userId }).select('id').single()
       if (recipeError || !recipe) throw new Error()
       await supabase.from('plan_exercises').insert(selected.map((ex, i) => ({ plan_id: recipe.id, exercise_id: ex.id, sort_order: i })))
       router.push('/recipes')

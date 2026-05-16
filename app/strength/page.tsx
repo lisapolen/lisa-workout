@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Block, Plan } from '@/lib/types'
 import { getMondayOfWeek, relativeDate } from '@/lib/utils'
+import { useUser } from '@/lib/context/UserContext'
 
 const C = {
   bg:      '#1C1814',
@@ -27,6 +28,7 @@ const BLOCK_ACCENT: Record<string, string> = {
 
 export default function StrengthPage() {
   const router = useRouter()
+  const { userId } = useUser()
   const [plans, setPlans] = useState<Plan[]>([])
   const [blocks, setBlocks] = useState<Block[]>([])
   const [lastSessionByPlan, setLastSessionByPlan] = useState<Record<number, string>>({})
@@ -35,6 +37,7 @@ export default function StrengthPage() {
   const [weekDoneBlocks, setWeekDoneBlocks] = useState<Set<number>>(new Set())
 
   useEffect(() => {
+    if (!userId) return
     async function load() {
       const monday = getMondayOfWeek()
       const [
@@ -43,10 +46,10 @@ export default function StrengthPage() {
         { data: planSessions },
         { data: blockSessions },
       ] = await Promise.all([
-        supabase.from('plans').select('*').order('sort_order'),
+        supabase.from('plans').select('*').eq('user_id', userId).order('sort_order'),
         supabase.from('blocks').select('*').neq('type', 'cardio').order('sort_order'),
-        supabase.from('sessions').select('plan_id, date').not('plan_id', 'is', null).order('date', { ascending: false }),
-        supabase.from('sessions').select('block_id, date').not('block_id', 'is', null).order('date', { ascending: false }),
+        supabase.from('sessions').select('plan_id, date').not('plan_id', 'is', null).eq('user_id', userId).order('date', { ascending: false }),
+        supabase.from('sessions').select('block_id, date').not('block_id', 'is', null).eq('user_id', userId).order('date', { ascending: false }),
       ])
 
       if (plansData) setPlans(plansData)
@@ -73,7 +76,7 @@ export default function StrengthPage() {
       setWeekDoneBlocks(weekDoneBlocksSet)
     }
     load()
-  }, [])
+  }, [userId])
 
   const sortedPlans = [...plans].sort((a, b) => {
     const da = lastSessionByPlan[a.id] ?? ''

@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import BottomNav from '@/components/BottomNav'
 import SwRegister from '@/components/SwRegister'
+import AppShell from '@/components/AppShell'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -29,8 +30,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={inter.className}>
       <body className="min-h-screen antialiased" style={{ backgroundColor: '#1C1814', color: '#F5F0E8' }}>
-        <main className="pb-20">{children}</main>
-        <BottomNav />
+        <AppShell>
+          <main className="pb-20">{children}</main>
+          <BottomNav />
+        </AppShell>
         <SwRegister />
       </body>
     </html>

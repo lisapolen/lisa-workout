@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { Block } from '@/lib/types'
 import { getLocalDate, relativeDate } from '@/lib/utils'
 import { Toast } from '@/components/Toast'
+import { useUser } from '@/lib/context/UserContext'
 
 const C = {
   bg:      '#1C1814',
@@ -17,18 +18,20 @@ const C = {
 }
 
 export default function HomePage() {
+  const { userId } = useUser()
   const [cardioBlockId, setCardioBlockId] = useState<number | null>(null)
   const [lastStrength, setLastStrength] = useState<string | null>(null)
   const [lastCardio, setLastCardio] = useState<string | null>(null)
   const [toast, setToast] = useState<{ message: string; accent?: string } | null>(null)
 
   useEffect(() => {
+    if (!userId) return
     async function load() {
       const today = getLocalDate()
 
       const [{ data: blocksData }, { data: sessions }] = await Promise.all([
         supabase.from('blocks').select('*').order('sort_order'),
-        supabase.from('sessions').select('block_id, plan_id, date, blocks(type)').order('date', { ascending: false }).limit(50),
+        supabase.from('sessions').select('block_id, plan_id, date, blocks(type)').eq('user_id', userId).order('date', { ascending: false }).limit(50),
       ])
 
       const cardioBlock = (blocksData ?? []).find((b: Block) => b.type === 'cardio')
@@ -59,7 +62,7 @@ export default function HomePage() {
       }
     }
     load()
-  }, [])
+  }, [userId])
 
   const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 
