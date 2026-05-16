@@ -49,7 +49,8 @@ async function callClaude(body: RequestBody): Promise<GeneratedPlan> {
       content: `Exercise library: ${JSON.stringify(body.exercises)}\n\nRecent sessions (last 14 days): ${JSON.stringify(body.recentSessions)}\n\nExisting plan names to avoid duplicating: ${body.existingPlanNames.join(', ') || 'none'}\n\nToday is ${body.dayOfWeek}, ${body.today}.\n\nRespond with a single JSON object:`,
     }],
   })
-  const text = message.content[0].type === 'text' ? message.content[0].text : ''
+  const raw = message.content[0].type === 'text' ? message.content[0].text : ''
+  const text = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
   return JSON.parse(text) as GeneratedPlan
 }
 

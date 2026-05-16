@@ -63,7 +63,8 @@ async function callClaude(body: RequestBody): Promise<AuditResult> {
       content: `Exercise library: ${JSON.stringify(body.exercises)}\n\nSessions (last 6 weeks): ${JSON.stringify(body.sessions)}\n\nExisting plans: ${JSON.stringify(body.existingPlans)}\n\nToday: ${body.today}\n\nRespond with a single JSON object:`,
     }],
   })
-  const text = message.content[0].type === 'text' ? message.content[0].text : ''
+  const raw = message.content[0].type === 'text' ? message.content[0].text : ''
+  const text = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
   return JSON.parse(text) as AuditResult
 }
 
