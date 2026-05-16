@@ -42,6 +42,14 @@ export default function PlanPage() {
   const [confirmDelete, setConfirmDelete] = useState(false)
 
   useEffect(() => {
+    if (confirmDelete) {
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+      })
+    }
+  }, [confirmDelete])
+
+  useEffect(() => {
     async function load() {
       const { data: planData } = await supabase.from('plans').select('*').eq('id', planId).single()
       if (planData) setPlan(planData)

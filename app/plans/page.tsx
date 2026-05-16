@@ -44,6 +44,14 @@ export default function PlansPage() {
   const [loading, setLoading] = useState(true)
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null)
 
+  useEffect(() => {
+    if (confirmDelete !== null) {
+      requestAnimationFrame(() => {
+        document.getElementById(`plan-card-${confirmDelete}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      })
+    }
+  }, [confirmDelete])
+
   async function load() {
     const monday = getMondayOfWeek()
     const [{ data: planData }, { data: sessionData }] = await Promise.all([
@@ -97,6 +105,7 @@ export default function PlansPage() {
           </Link>
         </div>
       ) : (
+        <>
         <div className="flex flex-col gap-3 mb-6">
           {plans.map(plan => {
             const lastDate = lastSessionByPlan[plan.id]
@@ -105,6 +114,7 @@ export default function PlansPage() {
             return (
               <div
                 key={plan.id}
+                id={`plan-card-${plan.id}`}
                 className="rounded-2xl p-5"
                 style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderLeft: `3px solid ${PLAN_ACCENT}` }}
               >
@@ -157,15 +167,15 @@ export default function PlansPage() {
             )
           })}
         </div>
+        <Link
+          href="/plans/new"
+          className="block w-full text-center py-4 rounded-2xl font-semibold text-lg active:opacity-80"
+          style={{ backgroundColor: PLAN_ACCENT, color: C.text }}
+        >
+          + New plan
+        </Link>
+        </>
       )}
-
-      <Link
-        href="/plans/new"
-        className="block w-full text-center py-4 rounded-2xl font-semibold text-lg active:opacity-80"
-        style={{ backgroundColor: PLAN_ACCENT, color: C.text }}
-      >
-        + New plan
-      </Link>
     </div>
   )
 }
