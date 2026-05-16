@@ -36,3 +36,22 @@ export function markEasterEgg(key: string) {
   eggs[key] = true
   localStorage.setItem('easter_eggs', JSON.stringify(eggs))
 }
+
+/** Returns the ISO date string (YYYY-MM-DD) of the Monday of the current week. */
+export function getMondayOfWeek(): string {
+  const d = new Date()
+  const day = d.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+  d.setDate(d.getDate() + diff)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/** Returns a human-readable relative date string for an ISO date (e.g. "today", "yesterday", "3 days ago"). */
+export function relativeDate(iso: string): string {
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const d = new Date(iso); d.setHours(0, 0, 0, 0)
+  const diff = Math.round((today.getTime() - d.getTime()) / 86400000)
+  if (diff === 0) return 'today'
+  if (diff === 1) return 'yesterday'
+  return `${diff} days ago`
+}

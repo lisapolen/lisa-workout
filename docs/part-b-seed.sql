@@ -1,0 +1,84 @@
+-- ============================================================
+-- Part B: Ingredient library seeding
+-- Run this entire script in the Supabase SQL Editor
+-- ============================================================
+
+-- 1. Add new columns to exercises
+ALTER TABLE public.exercises ADD COLUMN IF NOT EXISTS description text;
+ALTER TABLE public.exercises ADD COLUMN IF NOT EXISTS video_url text;
+
+-- 2. Label existing Weight Machine exercises
+UPDATE public.exercises SET cuisine = 'Weight Machine' WHERE name IN (
+  'Seated Leg Press', 'Leg Curl', 'Leg Extension',
+  'Hip Abduction', 'Hip Adduction',
+  'Chest Press', 'Lat Pulldown', 'Seated Cable Row',
+  'Arm Curl', 'Tricep Pushdown', 'Face Pull',
+  'Pallof Press', 'Cable Woodchop'
+);
+
+-- 3. Insert 50 new exercises (10 per cuisine)
+
+-- FREE WEIGHTS (block 1 = Lower Body, block 2 = Upper Body)
+INSERT INTO public.exercises (block_id, name, sets, reps, starting_weight, neck_flag, sort_order, cuisine, description, video_url) VALUES
+  (2, 'Dumbbell Bench Press',    3, '10-12',   '20 lbs',   false, 20, 'Free Weights', 'Lie on a bench holding a dumbbell in each hand and press them from chest height to full arm extension. Primarily builds the chest, shoulders, and triceps.', 'https://www.youtube.com/shorts/1V3vpcaxRYQ'),
+  (2, 'Dumbbell Row',            3, '10-12',   '20 lbs',   false, 21, 'Free Weights', 'Brace one hand on a bench, hinge forward, and pull a dumbbell up toward your hip. Targets the lats and upper back muscles.', 'https://www.youtube.com/shorts/OL8yGrkXyiQ'),
+  (2, 'Dumbbell Shoulder Press', 3, '10-12',   '15 lbs',   false, 22, 'Free Weights', 'Press a pair of dumbbells overhead from shoulder height to full extension, seated or standing. Builds the deltoids, upper traps, and triceps.', 'https://www.youtube.com/shorts/k6tzKisR3NY'),
+  (1, 'Dumbbell Lunge',          3, '10 each', '15 lbs',   false, 20, 'Free Weights', 'Step forward or backward into a lunge while holding dumbbells at your sides. Works the quads, hamstrings, glutes, and challenges balance.', 'https://www.youtube.com/shorts/_lSFEA3uYY0'),
+  (2, 'Dumbbell Bicep Curl',     3, '12',      '12.5 lbs', false, 23, 'Free Weights', 'Stand holding dumbbells at your sides and curl them up toward your shoulders while keeping your elbows pinned. Isolates the biceps.', 'https://www.youtube.com/shorts/ICAXJVmOJik'),
+  (2, 'Dumbbell Tricep Kickback',2, '12',      '10 lbs',   false, 24, 'Free Weights', 'Hinge forward, pin your upper arm parallel to the floor, and extend the dumbbell back to straighten your arm. Isolates the triceps.', 'https://www.youtube.com/shorts/3Bv1n7-DN7c'),
+  (2, 'Dumbbell Lateral Raise',  3, '15',      '8 lbs',    false, 25, 'Free Weights', 'Stand with dumbbells at your sides and raise both arms out to shoulder height, leading with the elbows. Targets the lateral deltoids for wider shoulders.', 'https://www.youtube.com/shorts/HeovYNoZDRg'),
+  (1, 'Dumbbell Deadlift',       3, '10',      '25 lbs',   false, 21, 'Free Weights', 'Hold dumbbells in front of your thighs and hinge at the hips to lower them toward the floor, then drive through your heels to stand. Works the hamstrings, glutes, and lower back.', 'https://www.youtube.com/shorts/YQgs03p3UxE'),
+  (1, 'Dumbbell Goblet Squat',   3, '12',      '20 lbs',   false, 22, 'Free Weights', 'Hold a single dumbbell vertically at your chest and squat to depth, keeping your torso upright. Builds the quads, glutes, and core while reinforcing good squat mechanics.', 'https://www.youtube.com/shorts/eLX_dyvooKQ'),
+  (2, 'Dumbbell Chest Fly',      3, '12',      '15 lbs',   false, 26, 'Free Weights', 'Lie on a bench with dumbbells extended above your chest, then lower them in a wide arc before squeezing them back together. Stretches and works the chest through a large range of motion.', 'https://www.youtube.com/shorts/atcyT99YDeI');
+
+-- KETTLEBELL (block 1 = Lower Body, block 2 = Upper Body, block 4 = Core)
+INSERT INTO public.exercises (block_id, name, sets, reps, starting_weight, neck_flag, sort_order, cuisine, description, video_url) VALUES
+  (1, 'Kettlebell Swing',          3, '15',        '18 lbs', false, 23, 'Kettlebell', 'Hinge at the hips and drive the kettlebell forward to shoulder height using explosive hip extension. Builds powerful glutes, hamstrings, and cardiovascular conditioning.', 'https://www.youtube.com/shorts/aSYap2yhW8s'),
+  (1, 'Kettlebell Goblet Squat',   3, '12',        '18 lbs', false, 24, 'Kettlebell', 'Hold a kettlebell by the horns at your chest and squat to full depth, keeping your elbows inside your knees. Strengthens the quads, glutes, and helps develop squat depth.', 'https://www.youtube.com/shorts/7-80HiXX1K8'),
+  (4, 'Kettlebell Turkish Get-Up', 2, '3 each',    '12 lbs', false, 20, 'Kettlebell', 'Starting lying down with one arm pressing a kettlebell overhead, work through controlled transitions to reach a standing position, then reverse. Builds total-body strength, stability, and coordination.', 'https://www.youtube.com/shorts/g5dwOlGGfmU'),
+  (2, 'Kettlebell Clean',          3, '8 each',    '18 lbs', false, 27, 'Kettlebell', 'From a swing position, pull the kettlebell in a tight arc to land softly in the rack position at shoulder height. Develops power, coordination, and shoulder stability.', 'https://www.youtube.com/shorts/xQb9Tc3iQpI'),
+  (2, 'Kettlebell Press',          3, '8 each',    '18 lbs', false, 28, 'Kettlebell', 'From the rack position, press the kettlebell straight overhead to full lockout, then lower with control. Builds shoulder, tricep, and core strength.', 'https://www.youtube.com/shorts/OHo4GZHem7U'),
+  (2, 'Kettlebell Snatch',         3, '5 each',    '12 lbs', false, 29, 'Kettlebell', 'Swing the kettlebell from between the legs and pull it overhead in one fluid motion to a locked-out position. A full-body power movement combining hip drive with shoulder stability.', 'https://www.youtube.com/shorts/dexxzcg-fz8'),
+  (2, 'Kettlebell Row',            3, '10 each',   '18 lbs', false, 30, 'Kettlebell', 'Hinge forward with a kettlebell in one hand and row it up toward your hip, keeping the elbow close to your body. Targets the lats, rhomboids, and rear deltoids.', 'https://www.youtube.com/shorts/TO6UHf5Tsbs'),
+  (1, 'Kettlebell Deadlift',       3, '10',        '26 lbs', false, 25, 'Kettlebell', 'Stand over a kettlebell, hinge at the hips with a neutral spine, grip the handle, and drive through your heels to stand. A foundational hip-hinge movement targeting the glutes, hamstrings, and lower back.', 'https://www.youtube.com/shorts/mtWrHZo54cg'),
+  (4, 'Kettlebell Windmill',       2, '5 each',    '12 lbs', false, 21, 'Kettlebell', 'Press a kettlebell overhead, then hinge laterally to lower your free hand toward the floor while keeping the bell locked out. Develops core strength, shoulder stability, and hip mobility.', 'https://www.youtube.com/shorts/EZWHnzAjctU'),
+  (2, 'Kettlebell Halo',           2, '8 each dir','12 lbs', false, 31, 'Kettlebell', 'Hold a kettlebell by the horns and circle it slowly around your head in both directions. A mobility drill that loosens the shoulders and activates the core.', 'https://www.youtube.com/shorts/6-x1vVZtvOo');
+
+-- MAT WORK (block 1 = Lower Body, block 4 = Core)
+INSERT INTO public.exercises (block_id, name, sets, reps, starting_weight, neck_flag, sort_order, cuisine, description, video_url) VALUES
+  (1, 'Glute Bridge',      3, '15',        'Bodyweight', false, 26, 'Mat Work', 'Lie on your back with knees bent, then drive your hips up until your body forms a straight line from knees to shoulders. Activates and strengthens the glutes and hamstrings.', 'https://www.youtube.com/shorts/X_IGw8U_e38'),
+  (1, 'Hip Thrust',        3, '12',        'Bodyweight', false, 27, 'Mat Work', 'With your upper back on a bench and weight across your hips, drive your hips upward to full extension. A primary glute builder that allows heavier loading than the floor bridge.', 'https://www.youtube.com/shorts/GAZC6bt30Yg'),
+  (1, 'Donkey Kick',       3, '15 each',   'Bodyweight', false, 28, 'Mat Work', 'On all fours, kick one bent leg straight up toward the ceiling while keeping your hips level and core tight. Isolates the gluteus maximus.', 'https://www.youtube.com/shorts/XRmrRiIdR2o'),
+  (1, 'Fire Hydrant',      3, '15 each',   'Bodyweight', false, 29, 'Mat Work', 'From a tabletop position, lift one knee out to the side like a dog at a hydrant, keeping the hip stable. Strengthens the glute medius and improves hip abduction mobility.', 'https://www.youtube.com/shorts/M9H61TK59RY'),
+  (1, 'Clamshell',         3, '15 each',   'Bodyweight', false, 30, 'Mat Work', 'Lie on your side with knees bent and feet together, then rotate the top knee upward like a clamshell opening. Targets the glute medius and external hip rotators.', 'https://www.youtube.com/shorts/FrF9jTHLlg0'),
+  (4, 'Supine Leg Raise',  3, '12',        'Bodyweight', false, 22, 'Mat Work', 'Lie flat on your back and raise both legs to vertical, then slowly lower them without letting your lower back arch. Challenges the lower abs and hip flexors.', 'https://www.youtube.com/shorts/7Wfq8-73YNk'),
+  (4, 'Superman Hold',     3, '10',        'Bodyweight', false, 23, 'Mat Work', 'Lie face down and simultaneously raise your arms, chest, and legs off the floor, holding the position. Strengthens the erector spinae, glutes, and hamstrings.', 'https://www.youtube.com/shorts/uexOGyxLr7E'),
+  (4, 'Cat-Cow Stretch',   2, '10 cycles', 'Bodyweight', false, 24, 'Mat Work', 'On hands and knees, alternate between arching your back up and letting it sag down in a flowing rhythm. Increases spinal mobility and relieves tension in the back.', 'https://www.youtube.com/shorts/MSBOBAIeLqI'),
+  (4, 'Hollow Body Hold',  3, '20-30 sec', 'Bodyweight', false, 25, 'Mat Work', 'Lie on your back, press your lower back into the floor, and hold your arms and legs slightly elevated in a banana shape. Builds deep core strength and tension.', 'https://www.youtube.com/shorts/KgkU7yAEW90'),
+  (4, 'Reverse Crunch',    3, '15',        'Bodyweight', false, 26, 'Mat Work', 'Lie on your back with legs raised, then curl your hips off the floor by pulling your knees toward your chest. Targets the lower portion of the rectus abdominis.', 'https://www.youtube.com/shorts/2rkmoJf0Iqc');
+
+-- BODYWEIGHT (block 1 = Lower Body, block 2 = Upper Body, block 4 = Core)
+INSERT INTO public.exercises (block_id, name, sets, reps, starting_weight, neck_flag, sort_order, cuisine, description, video_url) VALUES
+  (2, 'Push-Up',           3, '10-15',    'Bodyweight', false, 32, 'Bodyweight', 'Start in a high plank and lower your chest to the floor by bending your elbows, then press back up. Builds chest, shoulder, and tricep strength while engaging the core.', 'https://www.youtube.com/shorts/wD1M-f69Yy8'),
+  (1, 'Bodyweight Squat',  3, '15-20',    'Bodyweight', false, 31, 'Bodyweight', 'Stand with feet shoulder-width apart and lower your hips until your thighs are at least parallel to the floor, then stand back up. Develops leg and glute strength with no equipment required.', 'https://www.youtube.com/shorts/Qgpxx1Bxmgs'),
+  (1, 'Reverse Lunge',     3, '10 each',  'Bodyweight', false, 32, 'Bodyweight', 'Step one foot backward and lower your back knee toward the floor, then drive through your front heel to return to standing. Strengthens the quads, hamstrings, and glutes with less knee stress than a forward lunge.', 'https://www.youtube.com/shorts/X0ebejGKd68'),
+  (2, 'Pull-Up',           3, '5-8',      'Bodyweight', false, 33, 'Bodyweight', 'Hang from a bar with an overhand grip and pull your chin above it by driving your elbows down. One of the best upper-body pulling exercises, targeting the lats and biceps.', 'https://www.youtube.com/shorts/OEXosPwzFdc'),
+  (2, 'Tricep Dip',        3, '10-12',    'Bodyweight', false, 34, 'Bodyweight', 'With hands gripping parallel bars or a bench behind you, lower your body by bending your elbows, then press back up. Targets the triceps, chest, and front deltoids.', 'https://www.youtube.com/shorts/9llvBAV4RHI'),
+  (1, 'Burpee',            3, '10',       'Bodyweight', false, 33, 'Bodyweight', 'Drop to a plank, perform a push-up, jump your feet forward, then explode upward into a jump. A full-body conditioning exercise that builds strength and cardiovascular endurance.', 'https://www.youtube.com/shorts/zlYA1SENYG4'),
+  (4, 'Mountain Climber',  3, '20 each',  'Bodyweight', false, 27, 'Bodyweight', 'From a high plank, alternate driving each knee toward your chest in a running motion while keeping your hips down. Builds core strength, hip flexor endurance, and cardiovascular fitness.', 'https://www.youtube.com/shorts/hZb6jTbCLeE'),
+  (1, 'Step-Up',           3, '10 each',  'Bodyweight', false, 34, 'Bodyweight', 'Place one foot on a raised surface and drive through that heel to bring your body fully onto the step, then lower back down. Builds unilateral leg and glute strength with functional carryover.', 'https://www.youtube.com/shorts/cd1IecGpzrE'),
+  (1, 'Wall Sit',          3, '30-45 sec','Bodyweight', false, 35, 'Bodyweight', 'Lean your back flat against a wall and hold a seated position with thighs parallel to the floor. An isometric exercise that builds quad, glute, and hamstring endurance.', 'https://www.youtube.com/shorts/mDdLC-yKudY'),
+  (2, 'Inverted Row',      3, '10-12',    'Bodyweight', false, 35, 'Bodyweight', 'Lie under a bar or table, grip it with an overhand grip, and pull your chest up to meet it. A bodyweight horizontal pulling exercise that builds the lats and rear deltoids.', 'https://www.youtube.com/shorts/OEXosPwzFdc');
+
+-- BANDS (block 1 = Lower Body, block 2 = Upper Body)
+INSERT INTO public.exercises (block_id, name, sets, reps, starting_weight, neck_flag, sort_order, cuisine, description, video_url) VALUES
+  (2, 'Band Pull-Apart',        3, '15',      'Bands', false, 36, 'Bands', 'Hold a resistance band at shoulder height with arms extended and pull it apart until your hands reach your sides. Strengthens the rear deltoids, rhomboids, and improves posture.', 'https://www.youtube.com/shorts/qi2y-eI_kuI'),
+  (1, 'Banded Squat',           3, '15',      'Bands', false, 36, 'Bands', 'Place a resistance band around your thighs and squat to depth, using the band to cue proper knee tracking. Builds leg and glute strength while reinforcing good squat mechanics.', 'https://www.youtube.com/shorts/ZeNpwkySRbY'),
+  (2, 'Banded Row',             3, '15',      'Bands', false, 37, 'Bands', 'Anchor a band and pull both handles toward your torso while squeezing your shoulder blades together. Trains the lats, rhomboids, and rear deltoids with constant tension.', 'https://www.youtube.com/shorts/69PAQLOJWDs'),
+  (2, 'Banded Bicep Curl',      3, '12',      'Bands', false, 38, 'Bands', 'Stand on a resistance band and curl the handles up toward your shoulders, keeping your elbows stationary. Isolates the biceps with accommodating resistance throughout the curl.', 'https://www.youtube.com/shorts/Wi6G8Zw_BW8'),
+  (1, 'Banded Lateral Walk',    3, '15 each', 'Bands', false, 37, 'Bands', 'Place a mini band around your ankles or thighs and step side to side in a half-squat position. Activates the glute medius and improves hip abductor strength and knee stability.', 'https://www.youtube.com/shorts/6h3TVFPTSQo'),
+  (2, 'Banded Chest Press',     3, '12',      'Bands', false, 39, 'Bands', 'Anchor a band behind you and press both handles forward from chest height to full arm extension. Mimics the bench press using band resistance, targeting the chest, shoulders, and triceps.', 'https://www.youtube.com/shorts/wNCnXeagZgE'),
+  (1, 'Banded Glute Kickback',  3, '15 each', 'Bands', false, 38, 'Bands', 'Attach a band to your ankle and kick the banded leg straight back against the resistance. Isolates the glutes with constant tension throughout the movement.', 'https://www.youtube.com/shorts/WzuDhJuGZIQ'),
+  (2, 'Banded Face Pull',       3, '15',      'Bands', false, 40, 'Bands', 'Anchor a band at face height and pull the handles toward your face while flaring your elbows out and rotating your shoulders back. Strengthens the rear deltoids, rotator cuff, and upper back.', 'https://www.youtube.com/shorts/OIMUU2Q-upU'),
+  (2, 'Banded Overhead Press',  3, '12',      'Bands', false, 41, 'Bands', 'Stand on a resistance band and press both handles overhead to full lockout, then lower with control. Builds shoulder and tricep strength with resistance that increases as you press higher.', 'https://www.youtube.com/shorts/79wEenoO-EY'),
+  (1, 'Banded Deadlift',        3, '12',      'Bands', false, 39, 'Bands', 'Stand on a resistance band and perform a hip-hinge deadlift pattern, pulling the band to full hip extension. Trains the posterior chain — hamstrings, glutes, and lower back — with accommodating resistance.', 'https://www.youtube.com/shorts/kClYv6Qil8M');

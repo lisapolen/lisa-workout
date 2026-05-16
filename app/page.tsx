@@ -323,7 +323,7 @@ export default function HomePage() {
               Build a custom workout from exercises across your blocks — like Push Day or Plan A — and rotate through them across the week.
             </p>
             <Link
-              href="/plans/new"
+              href="/recipes/new"
               className="inline-block mt-2 text-xs font-semibold"
               style={{ color: '#A87FA8' }}
             >
@@ -346,14 +346,41 @@ export default function HomePage() {
       {/* Plans section */}
       {plans.length > 0 && (
         <div className="mb-5">
-          <p className="text-xs uppercase tracking-wider mb-2" style={{ color: C.muted }}>My Plans</p>
+          <p className="text-xs uppercase tracking-wider mb-2" style={{ color: C.muted }}>My Recipes</p>
+          {/* Most recent recipe quick-start */}
+          {(() => {
+            const today = getLocalDate()
+            const mostRecent = plans.length > 0
+              ? plans.reduce((best, p) => {
+                  const d = lastSessionByPlan[p.id]
+                  if (!d) return best
+                  if (!best || d > (lastSessionByPlan[best.id] ?? '')) return p
+                  return best
+                }, null as typeof plans[0] | null)
+              : null
+            const cookedToday = mostRecent && lastSessionByPlan[mostRecent.id] === today
+            return mostRecent && !cookedToday ? (
+              <div className="mb-4 rounded-2xl p-4 flex items-center justify-between"
+                style={{ backgroundColor: '#1E1826', border: `1px solid ${C.border}` }}>
+                <div>
+                  <p className="text-xs mb-0.5" style={{ color: C.muted }}>Cook again</p>
+                  <p className="font-bold" style={{ color: C.text }}>{mostRecent.name}</p>
+                </div>
+                <Link href={`/recipes/${mostRecent.id}`}
+                  className="px-4 py-2 rounded-xl font-semibold text-sm active:opacity-80"
+                  style={{ backgroundColor: '#A87FA8', color: C.text }}>
+                  Cook →
+                </Link>
+              </div>
+            ) : null
+          })()}
           <div className="flex flex-col gap-3">
             {plans.map(plan => {
               const done = weekDonePlans.has(plan.id)
               return (
                 <Link
                   key={plan.id}
-                  href={`/plans/${plan.id}`}
+                  href={`/recipes/${plan.id}`}
                   className="flex items-center gap-3 p-5 rounded-2xl active:opacity-80"
                   style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderLeft: '3px solid #A87FA8', opacity: done ? 0.6 : 1 }}
                 >
@@ -371,18 +398,18 @@ export default function HomePage() {
               )
             })}
           </div>
-          <Link href="/plans" className="text-xs mt-2 block text-right" style={{ color: C.muted }}>Manage →</Link>
+          <Link href="/recipes" className="text-xs mt-2 block text-right" style={{ color: C.muted }}>Manage →</Link>
         </div>
       )}
 
-      {/* Generate a plan entry point */}
+      {/* Generate a recipe entry point */}
       <Link
-        href="/generate-plan"
+        href="/generate-recipe"
         className="flex items-center gap-3 rounded-2xl p-4 mb-5 active:opacity-80"
         style={{ backgroundColor: '#1E1826', border: '1px dashed #A87FA860', borderLeft: '3px solid #A87FA8' }}
       >
         <div className="flex-1">
-          <p className="font-semibold text-sm" style={{ color: C.text }}>Not sure? Generate a plan</p>
+          <p className="font-semibold text-sm" style={{ color: C.text }}>Not sure? Generate a recipe</p>
           <p className="text-xs mt-0.5" style={{ color: C.muted }}>Claude picks based on what you&apos;ve done recently</p>
         </div>
         <span className="text-sm font-bold" style={{ color: '#A87FA8' }}>Go &rarr;</span>

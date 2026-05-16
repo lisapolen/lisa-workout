@@ -16,6 +16,9 @@ export interface Exercise {
   notes: string | null
   neck_flag: boolean
   sort_order: number
+  cuisine: string | null
+  description: string | null
+  video_url: string | null
 }
 
 export interface Session {
@@ -33,6 +36,8 @@ export interface Plan {
   name: string
   sort_order: number
   created_at: string
+  type: 'straight' | 'circuit'
+  rounds: number
 }
 
 export interface PlanExercise {
@@ -57,6 +62,7 @@ export interface SetLog {
   weight: number | null
   reps: number | null
   completed_at: string
+  status: 'done' | 'skipped' | 'partial'
 }
 
 export interface CardioLog {

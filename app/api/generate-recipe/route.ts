@@ -61,13 +61,12 @@ export async function POST(req: NextRequest) {
     try {
       plan = await callClaude(body)
     } catch (e) {
-      console.error('generate-plan first attempt failed:', e)
-      // Retry once on parse/API failure
+      console.error('generate-recipe first attempt failed:', e)
       plan = await callClaude(body)
     }
     return NextResponse.json(plan)
   } catch (e) {
-    console.error('generate-plan failed:', e)
-    return NextResponse.json({ error: 'Failed to generate plan' }, { status: 500 })
+    console.error('generate-recipe failed:', e)
+    return NextResponse.json({ error: 'Failed to generate recipe' }, { status: 500 })
   }
 }

@@ -34,27 +34,16 @@ const REST_TARGET: Record<string, number> = {
   'Core':       60,
 }
 
-const MOTIVATION = [
-  'Strong work today.',
-  "That's another one.",
-  'Your future self says thanks.',
-  'Rest well. You earned it.',
-  'Consistency compounds.',
-  'Showed up. Did the work.',
-  'Nothing fancy. Just progress.',
-  'One more block done.',
-  'Every set counts.',
-  'Keep the habit.',
-  "You didn't skip.",
-  'Quietly getting stronger.',
-  'Stack the days.',
-  "That's what it looks like.",
-  'No drama. Just done.',
-  'Same time next week.',
-  'Brick by brick.',
-  'The work adds up.',
-  'Done is done.',
-  'Good session.',
+const COOK_PUNS = [
+  'Keep the heat up.',
+  'Good technique, chef.',
+  "You're cooking now.",
+  'Muscle memory forming.',
+  'Every rep counts.',
+  "Don't skip the prep work.",
+  'Low and slow builds strength.',
+  'Finishing strong.',
+  "That's the recipe.",
 ]
 
 export default function SetLoggerPage() {
@@ -70,7 +59,7 @@ export default function SetLoggerPage() {
   const [weight, setWeight] = useState('')
   const [reps, setReps] = useState('')
   const [showNeck, setShowNeck] = useState(false)
-  const [motivation] = useState(() => MOTIVATION[Math.floor(Math.random() * MOTIVATION.length)])
+  const [motivation] = useState(() => COOK_PUNS[Math.floor(Math.random() * COOK_PUNS.length)])
 
   const {
     completedSets, setCompletedSets, currentSet, setCurrentSet,
@@ -206,9 +195,18 @@ export default function SetLoggerPage() {
       <h1 className="text-2xl font-bold mb-1" style={{ color: C.text }}>{exercise.name}</h1>
       <p className="mb-1" style={{ color: C.muted }}>Target: {exercise.sets} &times; {exercise.reps}</p>
       {exercise.notes && (
-        <p className="text-sm italic mb-4" style={{ color: C.muted }}>{exercise.notes}</p>
+        <p className="text-sm italic mb-2" style={{ color: C.muted }}>{exercise.notes}</p>
       )}
-      {!exercise.notes && <div className="mb-4" />}
+      {exercise.description && (
+        <p className="text-sm mb-2" style={{ color: C.muted }}>{exercise.description}</p>
+      )}
+      {exercise.video_url && (
+        <a href={exercise.video_url} target="_blank" rel="noopener noreferrer"
+          className="text-sm mb-4 inline-block" style={{ color: C.accent }}>
+          Watch →
+        </a>
+      )}
+      {!exercise.notes && !exercise.description && <div className="mb-4" />}
 
       {/* Neck flag */}
       {exercise.neck_flag && (
