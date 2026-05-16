@@ -31,6 +31,7 @@ export default function NewRecipePage() {
   const [selected, setSelected] = useState<ExerciseWithBlock[]>([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [expandedBlock, setExpandedBlock] = useState<string | null>(null)
 
   useEffect(() => {
     async function load() {
@@ -153,33 +154,55 @@ export default function NewRecipePage() {
         </div>
       )}
 
-      {/* Ingredient picker */}
+      {/* Ingredient picker — accordion */}
       <div className="mb-6">
         <p className="text-xs uppercase tracking-wider mb-3" style={{ color: C.muted }}>Ingredient library</p>
-        {Object.entries(byBlock).map(([blockName, exercises]) => (
-          <div key={blockName} className="mb-4">
-            <p className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: C.accent }}>{blockName}</p>
-            <div className="flex flex-col gap-2">
-              {exercises.map(ex => {
-                const isSelected = selectedIds.has(ex.id)
-                return (
-                  <button key={ex.id} onClick={() => toggleExercise(ex)}
-                    className="flex items-center gap-3 rounded-xl p-4 text-left active:opacity-80"
-                    style={{ backgroundColor: isSelected ? `${PLAN_ACCENT}18` : C.card, border: `1px solid ${isSelected ? PLAN_ACCENT : C.border}` }}>
-                    <span className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 text-xs font-bold"
-                      style={{ borderColor: isSelected ? PLAN_ACCENT : C.border, backgroundColor: isSelected ? PLAN_ACCENT : 'transparent', color: C.text }}>
-                      {isSelected ? '✓' : ''}
-                    </span>
-                    <div className="flex-1">
-                      <p className="font-semibold" style={{ color: C.text }}>{ex.name}</p>
-                      <p className="text-xs" style={{ color: C.muted }}>{ex.sets}×{ex.reps}{ex.cuisine ? ` · ${ex.cuisine}` : ''}</p>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        ))}
+        <div className="flex flex-col gap-2">
+          {Object.entries(byBlock).map(([blockName, exercises]) => {
+            const isOpen = expandedBlock === blockName
+            const selectedInBlock = exercises.filter(ex => selectedIds.has(ex.id)).length
+            return (
+              <div key={blockName} className="rounded-2xl overflow-hidden" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
+                <button
+                  onClick={() => setExpandedBlock(isOpen ? null : blockName)}
+                  className="w-full flex items-center justify-between px-4 py-4 active:opacity-80"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="font-semibold" style={{ color: C.text }}>{blockName}</span>
+                    {selectedInBlock > 0 && (
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full"
+                        style={{ backgroundColor: `${PLAN_ACCENT}22`, color: PLAN_ACCENT }}>
+                        {selectedInBlock} added
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-lg" style={{ color: C.muted }}>{isOpen ? '∧' : '∨'}</span>
+                </button>
+                {isOpen && (
+                  <div className="flex flex-col gap-2 px-3 pb-3">
+                    {exercises.map(ex => {
+                      const isSelected = selectedIds.has(ex.id)
+                      return (
+                        <button key={ex.id} onClick={() => toggleExercise(ex)}
+                          className="flex items-center gap-3 rounded-xl p-3 text-left active:opacity-80"
+                          style={{ backgroundColor: isSelected ? `${PLAN_ACCENT}18` : C.bg, border: `1px solid ${isSelected ? PLAN_ACCENT : C.border}` }}>
+                          <span className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 text-xs font-bold"
+                            style={{ borderColor: isSelected ? PLAN_ACCENT : C.border, backgroundColor: isSelected ? PLAN_ACCENT : 'transparent', color: C.text }}>
+                            {isSelected ? '✓' : ''}
+                          </span>
+                          <div className="flex-1">
+                            <p className="font-semibold text-sm" style={{ color: C.text }}>{ex.name}</p>
+                            <p className="text-xs" style={{ color: C.muted }}>{ex.sets}×{ex.reps}{ex.cuisine ? ` · ${ex.cuisine}` : ''}</p>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
       </div>
 
       <div className="h-24" />
