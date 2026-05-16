@@ -375,6 +375,19 @@ export default function HomePage() {
         </div>
       )}
 
+      {/* Generate a plan entry point */}
+      <Link
+        href="/generate-plan"
+        className="flex items-center gap-3 rounded-2xl p-4 mb-5 active:opacity-80"
+        style={{ backgroundColor: '#1E1826', border: '1px dashed #A87FA860', borderLeft: '3px solid #A87FA8' }}
+      >
+        <div className="flex-1">
+          <p className="font-semibold text-sm" style={{ color: C.text }}>Not sure? Generate a plan</p>
+          <p className="text-xs mt-0.5" style={{ color: C.muted }}>Claude picks based on what you&apos;ve done recently</p>
+        </div>
+        <span className="text-sm font-bold" style={{ color: '#A87FA8' }}>Go &rarr;</span>
+      </Link>
+
       {/* Weekly program strip */}
       {blocks.length > 0 && (
         <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
