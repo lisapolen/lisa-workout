@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import { Block, Exercise, SetLog } from '@/lib/types'
+import { Block, Exercise } from '@/lib/types'
 import { getLocalDate } from '@/lib/utils'
 import NeckSafetyModal from '@/components/NeckSafetyModal'
 
@@ -26,7 +26,7 @@ const BLOCK_ACCENT: Record<string, string> = {
   'Recovery':   '#8A7FA8',
 }
 
-// ─── Cardio ─────────────────────────────────────────────────────────────────
+// ─── Cardio ──────────────────────────────────────────────────────────────────
 
 const CARDIO_TYPES = [
   { key: 'interval_run', label: 'Interval Run' },
@@ -76,7 +76,20 @@ function CardioView({ blockId }: { blockId: number }) {
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [zone2Count, setZone2Count] = useState<number | null>(null)
   const router = useRouter()
+
+  useEffect(() => {
+    const d = new Date()
+    d.setDate(d.getDate() - 28)
+    const cutoff = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    supabase
+      .from('cardio_log')
+      .select('id', { count: 'exact', head: true })
+      .eq('type', 'zone2')
+      .gte('date', cutoff)
+      .then(({ count }) => { if (count !== null) setZone2Count(count) })
+  }, [])
 
   async function save() {
     if (!selected || saving) return
@@ -129,6 +142,11 @@ function CardioView({ blockId }: { blockId: number }) {
 
   return (
     <div>
+      {zone2Count !== null && (
+        <p className="text-sm mb-4" style={{ color: C.muted }}>
+          Zone 2 this month: <span style={{ color: BLOCK_ACCENT['Cardio'], fontWeight: 600 }}>{zone2Count} {zone2Count === 1 ? 'session' : 'sessions'}</span>
+        </p>
+      )}
       {!selected ? (
         <div className="flex flex-col gap-3">
           <p className="mb-2" style={{ color: C.muted }}>Choose session type:</p>
@@ -229,31 +247,58 @@ function CardioView({ blockId }: { blockId: number }) {
   )
 }
 
-// ─── Recovery ────────────────────────────────────────────────────────────────
+// ─── Recovery ─────────────────────────────────────────────────────────────────
 
-const RECOVERY_OPTIONS = ['Easy Peloton ride', 'Long dog walk', 'Stretching']
+const BODY_AREAS = [
+  'Neck & shoulders',
+  'Upper back',
+  'Hips & glutes',
+  'Quads & hamstrings',
+  'Calves & ankles',
+] as const
+
+type BodyStatus = 'fine' | 'tight' | 'sore'
+type SleepStatus = 'good' | 'okay' | 'poor'
+
+const STATUS_COLORS: Record<BodyStatus, string> = {
+  fine:  '#6B8F6B',
+  tight: '#C4714A',
+  sore:  '#C4514A',
+}
+const SLEEP_COLORS: Record<SleepStatus, string> = {
+  good: '#6B8F6B',
+  okay: '#C4B098',
+  poor: '#C4514A',
+}
 
 function RecoveryView({ blockId }: { blockId: number }) {
-  const [checked, setChecked] = useState<string[]>([])
+  const [bodyStatus, setBodyStatus] = useState<Record<string, BodyStatus | null>>({})
+  const [sleep, setSleep] = useState<SleepStatus | null>(null)
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const router = useRouter()
 
-  function toggle(item: string) {
-    setChecked(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item])
-  }
+  const anyBodySelected = Object.values(bodyStatus).some(v => v !== null && v !== undefined)
+  const canSave = anyBodySelected || sleep !== null
 
   async function save() {
-    if (saving) return
+    if (!canSave || saving) return
     setSaving(true)
     try {
       const today = getLocalDate()
-      const summary = checked.length ? checked.join(', ') : 'Recovery'
+      const bodyParts = BODY_AREAS
+        .filter(a => bodyStatus[a])
+        .map(a => `${a}: ${bodyStatus[a]}`)
+        .join(', ')
+      const sleepStr = sleep ? `Sleep: ${sleep}` : ''
+      const parts = [bodyParts, sleepStr].filter(Boolean).join(' — ')
+      const summary = [parts, notes].filter(Boolean).join(' — ') || 'Recovery'
+
       await supabase.from('sessions').insert({
         date: today,
         block_id: blockId,
-        notes: notes ? `${summary} — ${notes}` : summary,
+        notes: summary,
       })
       setSaved(true)
     } finally {
@@ -286,29 +331,63 @@ function RecoveryView({ blockId }: { blockId: number }) {
 
   return (
     <div>
-      <div className="flex flex-col gap-3 mb-6">
-        {RECOVERY_OPTIONS.map(item => (
-          <button
-            key={item}
-            onClick={() => toggle(item)}
-            className="flex items-center gap-4 p-5 rounded-2xl border-2 text-left text-lg font-semibold transition-colors"
-            style={checked.includes(item)
-              ? { borderColor: C.accent, backgroundColor: 'rgba(196,113,74,0.1)', color: C.text }
-              : { borderColor: C.border, backgroundColor: C.card, color: C.muted }}
-          >
-            <span
-              className="w-7 h-7 rounded-full border-2 flex items-center justify-center flex-shrink-0 text-sm font-bold"
-              style={checked.includes(item)
-                ? { borderColor: C.accent, backgroundColor: C.accent, color: C.text }
-                : { borderColor: C.border }}
-            >
-              {checked.includes(item) && '✓'}
-            </span>
-            {item}
-          </button>
-        ))}
+      {/* Body status */}
+      <div className="rounded-2xl p-4 mb-4" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
+        <p className="text-xs uppercase tracking-wider mb-4" style={{ color: C.muted }}>Body check-in</p>
+        <div className="flex flex-col gap-4">
+          {BODY_AREAS.map(area => {
+            const current = bodyStatus[area] ?? null
+            return (
+              <div key={area}>
+                <p className="text-sm mb-2" style={{ color: C.text }}>{area}</p>
+                <div className="flex gap-2">
+                  {(['fine', 'tight', 'sore'] as BodyStatus[]).map(status => {
+                    const active = current === status
+                    const color = STATUS_COLORS[status]
+                    return (
+                      <button
+                        key={status}
+                        onClick={() => setBodyStatus(prev => ({ ...prev, [area]: active ? null : status }))}
+                        className="flex-1 py-2 rounded-xl text-sm font-semibold border transition-colors"
+                        style={active
+                          ? { backgroundColor: `${color}25`, borderColor: color, color }
+                          : { backgroundColor: 'transparent', borderColor: C.border, color: C.muted }}
+                      >
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })}
+        </div>
       </div>
 
+      {/* Sleep */}
+      <div className="rounded-2xl p-4 mb-4" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
+        <p className="text-sm mb-3" style={{ color: C.text }}>Sleep last night</p>
+        <div className="flex gap-2">
+          {(['good', 'okay', 'poor'] as SleepStatus[]).map(s => {
+            const active = sleep === s
+            const color = SLEEP_COLORS[s]
+            return (
+              <button
+                key={s}
+                onClick={() => setSleep(active ? null : s)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold border transition-colors"
+                style={active
+                  ? { backgroundColor: `${color}25`, borderColor: color, color }
+                  : { backgroundColor: 'transparent', borderColor: C.border, color: C.muted }}
+              >
+                {s.charAt(0).toUpperCase() + s.slice(1)}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Notes */}
       <div className="mb-6">
         <label className="text-sm mb-2 block" style={{ color: C.muted }}>Notes</label>
         <textarea
@@ -317,13 +396,13 @@ function RecoveryView({ blockId }: { blockId: number }) {
           rows={3}
           className="w-full rounded-xl p-4 outline-none resize-none text-base"
           style={{ backgroundColor: C.card, border: `2px solid ${C.border}`, color: C.text }}
-          placeholder="How did it feel?"
+          placeholder="Anything to note?"
         />
       </div>
 
       <button
         onClick={save}
-        disabled={saving || checked.length === 0}
+        disabled={saving || !canSave}
         className="w-full font-bold text-2xl rounded-xl py-5 disabled:opacity-40 active:opacity-80"
         style={{ backgroundColor: C.accent, color: C.text }}
       >
@@ -333,7 +412,7 @@ function RecoveryView({ blockId }: { blockId: number }) {
   )
 }
 
-// ─── Strength / Core ─────────────────────────────────────────────────────────
+// ─── Strength / Core ──────────────────────────────────────────────────────────
 
 function StrengthView({
   exercises,
@@ -397,7 +476,6 @@ function StrengthView({
                   <p className="text-sm" style={{ color: C.muted }}>{ex.sets} &times; {ex.reps}</p>
                 </div>
                 <div className="text-right ml-4 flex flex-col items-end gap-1">
-                  {/* Weight always shown if available */}
                   {isBodyweight ? (
                     <p className="text-sm" style={{ color: C.muted }}>Bodyweight</p>
                   ) : lastW !== null && lastW !== undefined ? (
@@ -407,7 +485,6 @@ function StrengthView({
                   ) : (
                     <p className="text-xs" style={{ color: C.muted }}>No weight yet</p>
                   )}
-                  {/* Completion state below weight */}
                   {isComplete && (
                     <span
                       className="text-xs font-bold"
@@ -437,7 +514,17 @@ function StrengthView({
   )
 }
 
-// ─── Page ────────────────────────────────────────────────────────────────────
+// ─── Feeling check-in ─────────────────────────────────────────────────────────
+
+type Feeling = 'great' | 'okay' | 'tired'
+
+const FEELING_OPTIONS: { value: Feeling; label: string; desc: string }[] = [
+  { value: 'great', label: 'Great',  desc: 'Energized and ready' },
+  { value: 'okay',  label: 'Okay',   desc: 'Decent, let\'s go' },
+  { value: 'tired', label: 'Tired',  desc: 'Low energy today' },
+]
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function BlockPage() {
   const params = useParams()
@@ -448,6 +535,8 @@ export default function BlockPage() {
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [lastWeights, setLastWeights] = useState<Record<number, number | null>>({})
   const [completedCounts, setCompletedCounts] = useState<Record<number, number>>({})
+  const [feeling, setFeeling] = useState<Feeling | null>(null)
+  const [feelingCheckedIn, setFeelingCheckedIn] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -457,6 +546,14 @@ export default function BlockPage() {
         .eq('id', blockId)
         .single()
       if (blockData) setBlock(blockData)
+
+      // Check feeling for today
+      const today = getLocalDate()
+      const storedFeeling = localStorage.getItem(`feeling_${blockId}_${today}`) as Feeling | null
+      if (storedFeeling) {
+        setFeeling(storedFeeling)
+        setFeelingCheckedIn(true)
+      }
 
       if (blockData?.type === 'strength' || blockData?.type === 'core') {
         const { data: exData } = await supabase
@@ -469,7 +566,6 @@ export default function BlockPage() {
           setExercises(exData)
           const ids = exData.map((e: Exercise) => e.id)
 
-          // One query per exercise to get the true last weight (no arbitrary row cap)
           const weightResults = await Promise.all(
             ids.map((id: number) =>
               supabase
@@ -489,8 +585,7 @@ export default function BlockPage() {
           setLastWeights(map)
         }
 
-        // Check today's session for completion indicators
-        const today = getLocalDate()
+        // Completion indicators
         const sessionId = localStorage.getItem(`session_${blockId}_${today}`)
         if (sessionId) {
           const { data: todaySets } = await supabase
@@ -508,33 +603,63 @@ export default function BlockPage() {
     load()
   }, [blockId])
 
+  function selectFeeling(f: Feeling) {
+    const today = getLocalDate()
+    localStorage.setItem(`feeling_${blockId}_${today}`, f)
+    setFeeling(f)
+    setFeelingCheckedIn(true)
+  }
+
   if (!block) {
     return <div className="flex items-center justify-center h-64" style={{ color: C.muted }}>Loading...</div>
   }
 
   const isUpperBody = block.name === 'Upper Body'
   const accent = BLOCK_ACCENT[block.name] ?? C.accent
+  const needsCheckIn = (block.type === 'strength' || block.type === 'core') && !feelingCheckedIn
 
   return (
-    <div className="px-4 pt-6 max-w-lg mx-auto">
+    <div className="px-4 pt-6 pb-28 max-w-lg mx-auto">
       <button onClick={() => router.push('/')} className="text-sm mb-4 flex items-center gap-1" style={{ color: C.muted }}>
         &lsaquo; Home
       </button>
       <h1 className="text-3xl font-bold mb-2" style={{ color: C.text }}>{block.name}</h1>
       <div className="h-1 w-12 rounded-full mb-6" style={{ backgroundColor: accent }} />
 
-      {(block.type === 'strength' || block.type === 'core') && (
-        <StrengthView
-          exercises={exercises}
-          lastWeights={lastWeights}
-          completedCounts={completedCounts}
-          blockId={blockId}
-          isUpperBody={isUpperBody}
-          accent={accent}
-        />
+      {needsCheckIn ? (
+        <div>
+          <p className="text-lg font-semibold mb-1" style={{ color: C.text }}>How are you feeling?</p>
+          <p className="text-sm mb-6" style={{ color: C.muted }}>Takes a second. Helps the record.</p>
+          <div className="flex flex-col gap-3">
+            {FEELING_OPTIONS.map(({ value, label, desc }) => (
+              <button
+                key={value}
+                onClick={() => selectFeeling(value)}
+                className="w-full rounded-2xl p-5 text-left active:opacity-80"
+                style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}
+              >
+                <p className="text-xl font-bold" style={{ color: C.text }}>{label}</p>
+                <p className="text-sm" style={{ color: C.muted }}>{desc}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <>
+          {(block.type === 'strength' || block.type === 'core') && (
+            <StrengthView
+              exercises={exercises}
+              lastWeights={lastWeights}
+              completedCounts={completedCounts}
+              blockId={blockId}
+              isUpperBody={isUpperBody}
+              accent={accent}
+            />
+          )}
+          {block.type === 'cardio' && <CardioView blockId={blockId} />}
+          {block.type === 'recovery' && <RecoveryView blockId={blockId} />}
+        </>
       )}
-      {block.type === 'cardio' && <CardioView blockId={blockId} />}
-      {block.type === 'recovery' && <RecoveryView blockId={blockId} />}
     </div>
   )
 }

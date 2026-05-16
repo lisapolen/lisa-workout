@@ -3,15 +3,17 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { Block, VO2maxLog } from '@/lib/types'
+import { getLocalDate } from '@/lib/utils'
+import { Toast } from '@/components/Toast'
 
 const C = {
-  bg:        '#1C1814',
-  card:      '#2D2520',
-  border:    '#3A3228',
-  text:      '#F5F0E8',
-  muted:     '#C4B098',
-  accent:    '#C4714A',
-  success:   '#6B8F6B',
+  bg:      '#1C1814',
+  card:    '#2D2520',
+  border:  '#3A3228',
+  text:    '#F5F0E8',
+  muted:   '#C4B098',
+  accent:  '#C4714A',
+  success: '#6B8F6B',
 }
 
 const BLOCK_ACCENT: Record<string, string> = {
@@ -20,6 +22,14 @@ const BLOCK_ACCENT: Record<string, string> = {
   'Cardio':     '#C4A44A',
   'Core':       '#9E8B6B',
   'Recovery':   '#8A7FA8',
+}
+
+const BLOCK_ABBR: Record<string, string> = {
+  'Lower Body': 'LB',
+  'Upper Body': 'UB',
+  'Cardio':     'Car',
+  'Core':       'Core',
+  'Recovery':   'Rec',
 }
 
 const BLOCK_LABEL: Record<string, string> = {
@@ -45,6 +55,33 @@ function relativeDate(iso: string) {
   return `${diff} days ago`
 }
 
+function getMondayOfWeek(): string {
+  const d = new Date()
+  const day = d.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+  d.setDate(d.getDate() + diff)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function daysAgoDate(n: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() - n)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function computeStreak(walkDates: string[]): number {
+  const dateSet = new Set(walkDates)
+  let streak = 0
+  const d = new Date()
+  while (true) {
+    const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    if (!dateSet.has(ds)) break
+    streak++
+    d.setDate(d.getDate() - 1)
+  }
+  return streak
+}
+
 interface LastSessionInfo {
   date: string
   block_name: string
@@ -57,26 +94,90 @@ export default function HomePage() {
   const [lastSession, setLastSession] = useState<LastSessionInfo | null | false>(undefined as any)
   const [lastSessionByBlock, setLastSessionByBlock] = useState<Record<number, string>>({})
 
+  // Weekly strip
+  const [weekDoneBlocks, setWeekDoneBlocks] = useState<Set<number>>(new Set())
+  const [weekSessionCount, setWeekSessionCount] = useState(0)
+  const [weekCardioCt, setWeekCardioCt] = useState(0)
+  const [lastCardioDate, setLastCardioDate] = useState<string | null>(null)
+
+  // Walk
+  const [todayWalk, setTodayWalk] = useState(false)
+  const [walkStreak, setWalkStreak] = useState(0)
+  const [walkLoading, setWalkLoading] = useState(false)
+
+  // Toast
+  const [toast, setToast] = useState<{ message: string; accent?: string } | null>(null)
+
   useEffect(() => {
     async function load() {
-      const [{ data: blocksData }, { data: vo2Data }, { data: sessionData }, { data: allSessions }] = await Promise.all([
+      const today = getLocalDate()
+      const monday = getMondayOfWeek()
+      const sixtyDaysAgo = daysAgoDate(60)
+
+      const [
+        { data: blocksData },
+        { data: vo2Data },
+        { data: sessionData },
+        { data: allSessions },
+        { data: weekSessions },
+        { data: walkToday },
+        { data: walkHistory },
+      ] = await Promise.all([
         supabase.from('blocks').select('*').order('sort_order'),
         supabase.from('vo2max_log').select('*').order('date', { ascending: false }).limit(1),
         supabase.from('sessions').select('id, date, blocks(name)').order('created_at', { ascending: false }).limit(1).maybeSingle(),
         supabase.from('sessions').select('block_id, date').not('block_id', 'is', null).order('date', { ascending: false }),
+        supabase.from('sessions').select('block_id, blocks(type)').gte('date', monday).not('block_id', 'is', null),
+        supabase.from('walks_log').select('*').eq('date', today).maybeSingle(),
+        supabase.from('walks_log').select('date').gte('date', sixtyDaysAgo).order('date', { ascending: false }),
       ])
 
       if (blocksData) setBlocks(blocksData)
       if (vo2Data?.[0]) setVo2max(vo2Data[0])
 
+      // Last session by block
       const byBlock: Record<number, string> = {}
       allSessions?.forEach((s: any) => {
         if (s.block_id && !byBlock[s.block_id]) byBlock[s.block_id] = s.date
       })
       setLastSessionByBlock(byBlock)
 
-      if (!sessionData) { setLastSession(false); return }
+      // Last cardio date
+      const blockTypeMap: Record<number, string> = {}
+      blocksData?.forEach((b: Block) => { blockTypeMap[b.id] = b.type })
+      const lastCardio = allSessions?.find((s: any) => s.block_id && blockTypeMap[s.block_id] === 'cardio')
+      setLastCardioDate(lastCardio?.date ?? null)
 
+      // Weekly strip
+      const doneBlocks = new Set<number>()
+      let cardioCt = 0
+      weekSessions?.forEach((s: any) => {
+        if (s.block_id) doneBlocks.add(s.block_id)
+        if ((s.blocks as any)?.type === 'cardio') cardioCt++
+      })
+      setWeekDoneBlocks(doneBlocks)
+      setWeekSessionCount(weekSessions?.length ?? 0)
+      setWeekCardioCt(cardioCt)
+
+      // Walk
+      const walked = !!walkToday
+      setTodayWalk(walked)
+      const walkDates = (walkHistory ?? []).map((w: any) => w.date as string)
+      if (walked && !walkDates.includes(today)) walkDates.unshift(today)
+      setWalkStreak(computeStreak(walkDates))
+
+      // First full week easter egg
+      if (blocksData && doneBlocks.size === blocksData.length && blocksData.length > 0) {
+        const eggs = JSON.parse(localStorage.getItem('easter_eggs') || '{}')
+        if (!eggs.first_full_week) {
+          eggs.first_full_week = true
+          localStorage.setItem('easter_eggs', JSON.stringify(eggs))
+          setToast({ message: 'Full week. Every block. First time.', accent: C.success })
+        }
+      }
+
+      // Last session detail
+      if (!sessionData) { setLastSession(false); return }
       const s = sessionData as any
       const { data: setsData } = await supabase
         .from('sets_log')
@@ -93,20 +194,74 @@ export default function HomePage() {
           exercises.push({ name: r.exercises?.name ?? '', weight: r.weight, reps: r.reps })
         }
       }
-      setLastSession({ date: s.date, block_name: s.blocks?.name ?? 'Workout', exercises })
+      setLastSession({ date: s.date, block_name: (s.blocks as any)?.name ?? 'Workout', exercises })
     }
     load()
   }, [])
 
+  async function toggleWalk() {
+    if (walkLoading) return
+    setWalkLoading(true)
+    const today = getLocalDate()
+    const sixtyDaysAgo = daysAgoDate(60)
+    try {
+      if (todayWalk) {
+        await supabase.from('walks_log').delete().eq('date', today)
+        setTodayWalk(false)
+        const { data: wh } = await supabase.from('walks_log').select('date').gte('date', sixtyDaysAgo)
+        setWalkStreak(computeStreak((wh ?? []).map((w: any) => w.date as string)))
+      } else {
+        await supabase.from('walks_log').insert({ date: today })
+        setTodayWalk(true)
+        const { data: wh } = await supabase.from('walks_log').select('date').gte('date', sixtyDaysAgo)
+        const walkDates = [...new Set([today, ...(wh ?? []).map((w: any) => w.date as string)])]
+        const newStreak = computeStreak(walkDates)
+        setWalkStreak(newStreak)
+
+        const eggs = JSON.parse(localStorage.getItem('easter_eggs') || '{}')
+        if (newStreak >= 30 && !eggs.walk_streak_30) {
+          eggs.walk_streak_30 = true
+          localStorage.setItem('easter_eggs', JSON.stringify(eggs))
+          setToast({ message: "30 days. That's a habit.", accent: C.success })
+        } else if (newStreak >= 7 && !eggs.walk_streak_7) {
+          eggs.walk_streak_7 = true
+          localStorage.setItem('easter_eggs', JSON.stringify(eggs))
+          setToast({ message: 'A week straight. The dog approves.', accent: BLOCK_ACCENT['Recovery'] })
+        }
+      }
+    } finally {
+      setWalkLoading(false)
+    }
+  }
+
+  function getInsight(): string | null {
+    const dayOfWeek = new Date().getDay() // 0=Sun, 4=Thu, 5=Fri, 6=Sat
+    const isLateWeek = dayOfWeek >= 4 || dayOfWeek === 0
+    if (weekCardioCt === 0 && isLateWeek) return "No cardio yet this week — even a Zone 2 walk counts."
+    if (lastCardioDate) {
+      const today = new Date(); today.setHours(0, 0, 0, 0)
+      const last = new Date(lastCardioDate)
+      const diff = Math.floor((today.getTime() - last.getTime()) / 86400000)
+      if (diff >= 6) return `It's been ${diff} days since your last cardio session.`
+    }
+    if (blocks.length > 0 && weekDoneBlocks.size === blocks.length) return "Full week. Every block done."
+    if (weekSessionCount >= 4) return `Strong week — ${weekSessionCount} sessions.`
+    if (walkStreak >= 7) return "7-day walk streak. That daily movement adds up."
+    return null
+  }
+
+  const insight = getInsight()
   const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 
   return (
-    <div className="px-4 pt-8 max-w-lg mx-auto">
+    <div className="px-4 pt-8 pb-28 max-w-lg mx-auto">
+      {toast && <Toast message={toast.message} accent={toast.accent} onDone={() => setToast(null)} />}
+
       <p className="text-sm" style={{ color: C.muted }}>{dateStr}</p>
       <h1 className="text-3xl font-bold mt-1 mb-6" style={{ color: C.text }}>What are you doing today?</h1>
 
       {/* Block cards */}
-      <div className="flex flex-col gap-3 mb-6">
+      <div className="flex flex-col gap-3 mb-5">
         {blocks.map((block, i) => (
           <Link
             key={block.id}
@@ -129,6 +284,70 @@ export default function HomePage() {
           </Link>
         ))}
       </div>
+
+      {/* Weekly program strip */}
+      {blocks.length > 0 && (
+        <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
+          <div className="flex justify-around mb-3">
+            {blocks.map(block => {
+              const done = weekDoneBlocks.has(block.id)
+              const color = BLOCK_ACCENT[block.name] ?? C.accent
+              return (
+                <div key={block.id} className="flex flex-col items-center gap-1.5">
+                  <div
+                    className="w-9 h-9 rounded-full border-2 flex items-center justify-center transition-colors"
+                    style={done
+                      ? { backgroundColor: color, borderColor: color }
+                      : { borderColor: C.border }}
+                  >
+                    {done && <span className="text-sm font-bold" style={{ color: C.text }}>✓</span>}
+                  </div>
+                  <span className="text-xs" style={{ color: done ? color : C.border }}>
+                    {BLOCK_ABBR[block.name] ?? block.name.slice(0, 3)}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+          <p className="text-xs text-center" style={{ color: C.muted }}>
+            {weekDoneBlocks.size} of {blocks.length} blocks this week
+          </p>
+        </div>
+      )}
+
+      {/* Walk toggle */}
+      <button
+        onClick={toggleWalk}
+        disabled={walkLoading}
+        className="w-full rounded-2xl p-4 mb-2 flex items-center justify-between active:opacity-80 disabled:opacity-60 transition-colors"
+        style={{
+          backgroundColor: C.card,
+          border: `1px solid ${todayWalk ? BLOCK_ACCENT['Recovery'] : C.border}`,
+        }}
+      >
+        <div className="text-left">
+          <p className="font-semibold" style={{ color: todayWalk ? BLOCK_ACCENT['Recovery'] : C.text }}>
+            {todayWalk ? 'Walked today' : "Log today's walk"}
+          </p>
+          {walkStreak >= 2 && (
+            <p className="text-xs mt-0.5" style={{ color: C.muted }}>{walkStreak}-day streak</p>
+          )}
+        </div>
+        <div
+          className="w-7 h-7 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors"
+          style={todayWalk
+            ? { backgroundColor: BLOCK_ACCENT['Recovery'], borderColor: BLOCK_ACCENT['Recovery'] }
+            : { borderColor: C.border }}
+        >
+          {todayWalk && <span className="text-xs font-bold" style={{ color: C.text }}>✓</span>}
+        </div>
+      </button>
+
+      {/* Insight line */}
+      {insight && (
+        <p className="text-sm mb-5 px-1" style={{ color: C.muted }}>{insight}</p>
+      )}
+      {!insight && <div className="mb-5" />}
 
       {/* VO2max widget */}
       {vo2max && (

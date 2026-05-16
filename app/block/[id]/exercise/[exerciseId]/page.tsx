@@ -249,7 +249,12 @@ export default function SetLoggerPage() {
     const key = `session_${blockId}_${today}`
     const stored = localStorage.getItem(key)
     if (stored) return Number(stored)
-    const { data, error } = await supabase.from('sessions').insert({ date: today, block_id: blockId }).select('id').single()
+    const feeling = localStorage.getItem(`feeling_${blockId}_${today}`) ?? null
+    const { data, error } = await supabase
+      .from('sessions')
+      .insert({ date: today, block_id: blockId, feeling })
+      .select('id')
+      .single()
     if (error || !data) throw new Error('Could not create session')
     localStorage.setItem(key, String(data.id))
     return data.id
@@ -278,6 +283,13 @@ export default function SetLoggerPage() {
     if (qualified) {
       setShowOverloadPrompt(true)
       navigator.vibrate?.([50, 30, 50, 30, 100])
+      // First overload ever easter egg
+      const eggs = JSON.parse(localStorage.getItem('easter_eggs') || '{}')
+      if (!eggs.first_overload) {
+        eggs.first_overload = true
+        localStorage.setItem('easter_eggs', JSON.stringify(eggs))
+        setToast({ message: "Getting stronger. It's working.", accent: C.success })
+      }
     }
   }
 

@@ -23,6 +23,13 @@ export interface Session {
   date: string
   block_id: number | null
   notes: string | null
+  feeling: string | null
+  created_at: string
+}
+
+export interface WalkLog {
+  id: number
+  date: string
   created_at: string
 }
 
