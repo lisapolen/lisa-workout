@@ -59,12 +59,14 @@ export async function POST(req: NextRequest) {
     let plan: GeneratedPlan
     try {
       plan = await callClaude(body)
-    } catch {
+    } catch (e) {
+      console.error('generate-plan first attempt failed:', e)
       // Retry once on parse/API failure
       plan = await callClaude(body)
     }
     return NextResponse.json(plan)
-  } catch {
+  } catch (e) {
+    console.error('generate-plan failed:', e)
     return NextResponse.json({ error: 'Failed to generate plan' }, { status: 500 })
   }
 }
