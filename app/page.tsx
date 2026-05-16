@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import { Block, VO2maxLog } from '@/lib/types'
+import { Block, Plan, VO2maxLog } from '@/lib/types'
 import { getLocalDate } from '@/lib/utils'
 import { Toast } from '@/components/Toast'
 
@@ -105,6 +105,11 @@ export default function HomePage() {
   const [walkStreak, setWalkStreak] = useState(0)
   const [walkLoading, setWalkLoading] = useState(false)
 
+  // Plans
+  const [plans, setPlans] = useState<Plan[]>([])
+  const [lastSessionByPlan, setLastSessionByPlan] = useState<Record<number, string>>({})
+  const [weekDonePlans, setWeekDonePlans] = useState<Set<number>>(new Set())
+
   // Toast
   const [toast, setToast] = useState<{ message: string; accent?: string } | null>(null)
 
@@ -114,6 +119,8 @@ export default function HomePage() {
       const monday = getMondayOfWeek()
       const sixtyDaysAgo = daysAgoDate(60)
 
+      const oneYearAgo = daysAgoDate(365)
+
       const [
         { data: blocksData },
         { data: vo2Data },
@@ -122,14 +129,18 @@ export default function HomePage() {
         { data: weekSessions },
         { data: walkToday },
         { data: walkHistory },
+        { data: plansData },
+        { data: planSessions },
       ] = await Promise.all([
         supabase.from('blocks').select('*').order('sort_order'),
         supabase.from('vo2max_log').select('*').order('date', { ascending: false }).limit(1),
-        supabase.from('sessions').select('id, date, blocks(name)').order('created_at', { ascending: false }).limit(1).maybeSingle(),
-        supabase.from('sessions').select('block_id, date').not('block_id', 'is', null).order('date', { ascending: false }),
+        supabase.from('sessions').select('id, date, block_id, plan_id, blocks(name), plans(name)').order('created_at', { ascending: false }).limit(1).maybeSingle(),
+        supabase.from('sessions').select('block_id, date').not('block_id', 'is', null).gte('date', oneYearAgo).order('date', { ascending: false }),
         supabase.from('sessions').select('block_id, blocks(type)').gte('date', monday).not('block_id', 'is', null),
         supabase.from('walks_log').select('*').eq('date', today).maybeSingle(),
         supabase.from('walks_log').select('date').gte('date', sixtyDaysAgo).order('date', { ascending: false }),
+        supabase.from('plans').select('*').order('sort_order'),
+        supabase.from('sessions').select('plan_id, date').not('plan_id', 'is', null).order('date', { ascending: false }),
       ])
 
       if (blocksData) setBlocks(blocksData)
@@ -158,6 +169,18 @@ export default function HomePage() {
       setWeekDoneBlocks(doneBlocks)
       setWeekSessionCount(weekSessions?.length ?? 0)
       setWeekCardioCt(cardioCt)
+
+      // Plans
+      if (plansData) setPlans(plansData)
+      const byPlan: Record<number, string> = {}
+      const weekDonePlansSet = new Set<number>()
+      for (const s of planSessions ?? []) {
+        if (!s.plan_id) continue
+        if (!byPlan[s.plan_id]) byPlan[s.plan_id] = s.date
+        if (s.date >= monday) weekDonePlansSet.add(s.plan_id)
+      }
+      setLastSessionByPlan(byPlan)
+      setWeekDonePlans(weekDonePlansSet)
 
       // Walk
       const walked = !!walkToday
@@ -194,7 +217,8 @@ export default function HomePage() {
           exercises.push({ name: r.exercises?.name ?? '', weight: r.weight, reps: r.reps })
         }
       }
-      setLastSession({ date: s.date, block_name: (s.blocks as any)?.name ?? 'Workout', exercises })
+      const sessionName = (s.blocks as any)?.name ?? (s.plans as any)?.name ?? 'Workout'
+      setLastSession({ date: s.date, block_name: sessionName, exercises })
     }
     load()
   }, [])
@@ -285,6 +309,38 @@ export default function HomePage() {
         ))}
       </div>
 
+      {/* Plans section */}
+      {plans.length > 0 && (
+        <div className="mb-5">
+          <p className="text-xs uppercase tracking-wider mb-2" style={{ color: C.muted }}>My Plans</p>
+          <div className="flex flex-col gap-3">
+            {plans.map(plan => {
+              const done = weekDonePlans.has(plan.id)
+              return (
+                <Link
+                  key={plan.id}
+                  href={`/plans/${plan.id}`}
+                  className="flex items-center gap-3 p-5 rounded-2xl active:opacity-80"
+                  style={{ backgroundColor: C.card, border: `1px solid ${C.border}`, borderLeft: '3px solid #A87FA8', opacity: done ? 0.6 : 1 }}
+                >
+                  <div className="flex-1">
+                    <p className="text-xl font-bold" style={{ color: done ? C.muted : C.text }}>{plan.name}</p>
+                    <p className="text-xs mt-0.5" style={{ color: C.muted }}>
+                      {lastSessionByPlan[plan.id] ? `Last done: ${relativeDate(lastSessionByPlan[plan.id])}` : 'Never done'}
+                    </p>
+                  </div>
+                  {done && (
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: `${C.success}22`, color: C.success }}>Done ✓</span>
+                  )}
+                  <span className="text-3xl leading-none" style={{ color: C.muted }}>&rsaquo;</span>
+                </Link>
+              )
+            })}
+          </div>
+          <Link href="/plans" className="text-xs mt-2 block text-right" style={{ color: C.muted }}>Manage →</Link>
+        </div>
+      )}
+
       {/* Weekly program strip */}
       {blocks.length > 0 && (
         <div className="rounded-2xl p-4 mb-3" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
@@ -312,6 +368,15 @@ export default function HomePage() {
           <p className="text-xs text-center" style={{ color: C.muted }}>
             {weekDoneBlocks.size} of {blocks.length} blocks this week
           </p>
+          {plans.length > 0 && weekDonePlans.size > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2 pt-2" style={{ borderTop: `1px solid ${C.border}` }}>
+              {plans.filter(p => weekDonePlans.has(p.id)).map(p => (
+                <span key={p.id} className="text-xs font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: '#A87FA820', color: '#A87FA8', border: '1px solid #A87FA8' }}>
+                  {p.name} ✓
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

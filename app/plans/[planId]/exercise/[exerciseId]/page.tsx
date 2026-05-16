@@ -1,12 +1,11 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { Exercise } from '@/lib/types'
 import { getLocalDate, parseTargetReps, parseStartingWeight } from '@/lib/utils'
 import { useSetLogger } from '@/lib/hooks/useSetLogger'
 import { Stepper } from '@/components/Stepper'
-import NeckSafetyModal from '@/components/NeckSafetyModal'
 import { Toast } from '@/components/Toast'
 
 const C = {
@@ -20,13 +19,7 @@ const C = {
   danger:  '#C4514A',
 }
 
-const BLOCK_ACCENT: Record<string, string> = {
-  'Lower Body': '#C4714A',
-  'Upper Body': '#6B9E8F',
-  'Cardio':     '#C4A44A',
-  'Core':       '#9E8B6B',
-  'Recovery':   '#8A7FA8',
-}
+const PLAN_ACCENT = '#A87FA8'
 
 const REST_TARGET: Record<string, number> = {
   'Lower Body': 120,
@@ -42,34 +35,30 @@ const MOTIVATION = [
   'Consistency compounds.',
   'Showed up. Did the work.',
   'Nothing fancy. Just progress.',
-  'One more block done.',
   'Every set counts.',
   'Keep the habit.',
   "You didn't skip.",
   'Quietly getting stronger.',
   'Stack the days.',
-  "That's what it looks like.",
-  'No drama. Just done.',
-  'Same time next week.',
-  'Brick by brick.',
   'The work adds up.',
   'Done is done.',
   'Good session.',
 ]
 
-export default function SetLoggerPage() {
+export default function PlanExercisePage() {
   const params = useParams()
   const router = useRouter()
-  const blockId = Number(params.id)
+  const searchParams = useSearchParams()
+  const planId = Number(params.planId)
   const exerciseId = Number(params.exerciseId)
+  const exercisePos = searchParams.get('pos')
+  const exerciseTotal = searchParams.get('total')
 
   const [exercise, setExercise] = useState<Exercise | null>(null)
   const [blockName, setBlockName] = useState('')
-  const [isUpperBody, setIsUpperBody] = useState(false)
   const [lastWeight, setLastWeight] = useState<number | null | undefined>(undefined)
   const [weight, setWeight] = useState('')
   const [reps, setReps] = useState('')
-  const [showNeck, setShowNeck] = useState(false)
   const [motivation] = useState(() => MOTIVATION[Math.floor(Math.random() * MOTIVATION.length)])
 
   const {
@@ -82,7 +71,7 @@ export default function SetLoggerPage() {
     logSet, undoSet, dismissOverload,
     runOverloadCheck, sessionKey,
   } = useSetLogger({
-    session: { type: 'block', blockId },
+    session: { type: 'plan', planId },
     exercise,
     blockName,
     lastWeight,
@@ -98,12 +87,9 @@ export default function SetLoggerPage() {
       if (targetReps > 0) setReps(String(targetReps))
 
       const { data: blk } = await supabase.from('blocks').select('name').eq('id', ex.block_id).single()
-      if (blk?.name) {
-        setBlockName(blk.name)
-        if (blk.name === 'Upper Body') setIsUpperBody(true)
-      }
+      if (blk?.name) setBlockName(blk.name)
 
-      // Resume any sets already logged in today's session
+      // Resume any sets already logged in today's plan session
       const today = getLocalDate()
       const storedSessionId = localStorage.getItem(sessionKey(today))
       if (storedSessionId) {
@@ -151,23 +137,16 @@ export default function SetLoggerPage() {
   const restTarget = REST_TARGET[blockName] ?? 90
   const restPct = Math.min(100, (elapsed / restTarget) * 100)
   const restReady = elapsed >= restTarget
-  const blockAccent = BLOCK_ACCENT[blockName] ?? C.accent
 
   return (
     <div className="px-4 pt-6 pb-6 max-w-lg mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <button onClick={() => router.push(`/block/${blockId}`)} className="py-2 pr-4 text-sm" style={{ color: C.muted }}>
+        <button onClick={() => router.push(`/plans/${planId}`)} className="py-3 pr-6 pl-1 text-sm" style={{ color: C.muted }}>
           &lsaquo; Back
         </button>
-        {isUpperBody && (
-          <button
-            onClick={() => setShowNeck(true)}
-            className="w-11 h-11 rounded-full border-2 font-bold text-lg flex items-center justify-center"
-            style={{ borderColor: C.danger, color: C.danger }}
-          >
-            !
-          </button>
+        {exercisePos && exerciseTotal && (
+          <span className="text-sm" style={{ color: C.muted }}>Exercise {exercisePos} of {exerciseTotal}</span>
         )}
       </div>
 
@@ -226,7 +205,7 @@ export default function SetLoggerPage() {
             <p style={{ color: C.muted }}>Bodyweight exercise</p>
           ) : lastWeight != null ? (
             <p className="text-lg" style={{ color: C.text }}>
-              Last time: <span className="font-bold text-xl" style={{ color: blockAccent }}>{lastWeight} lbs</span>
+              Last time: <span className="font-bold text-xl" style={{ color: PLAN_ACCENT }}>{lastWeight} lbs</span>
             </p>
           ) : (
             <p style={{ color: C.muted }}>No previous weight &mdash; enter today&apos;s weight</p>
@@ -270,17 +249,14 @@ export default function SetLoggerPage() {
         <div className="mb-5 rounded-2xl p-4" style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}>
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium" style={{ color: C.muted }}>Rest</span>
-            <span
-              className="text-2xl font-bold tabular-nums"
-              style={{ color: restReady ? blockAccent : C.text }}
-            >
+            <span className="text-2xl font-bold tabular-nums" style={{ color: restReady ? PLAN_ACCENT : C.text }}>
               {restReady ? 'Ready ✓' : elapsed === 0 ? '0:00' : `${Math.floor(elapsed / 60)}:${(elapsed % 60).toString().padStart(2, '0')}`}
             </span>
           </div>
           <div className="h-2.5 rounded-full overflow-hidden" style={{ backgroundColor: C.border }}>
             <div
               className="h-full rounded-full transition-all duration-1000"
-              style={{ width: `${restPct}%`, backgroundColor: restReady ? blockAccent : C.muted }}
+              style={{ width: `${restPct}%`, backgroundColor: restReady ? PLAN_ACCENT : C.muted }}
             />
           </div>
         </div>
@@ -308,7 +284,7 @@ export default function SetLoggerPage() {
             onClick={() => logSet(weight, reps)}
             disabled={saving || (!isBodyweight && !weight) || !reps}
             className="w-full font-bold text-2xl rounded-xl py-5 disabled:opacity-40 active:opacity-80"
-            style={{ backgroundColor: blockAccent, color: C.text }}
+            style={{ backgroundColor: PLAN_ACCENT, color: C.text }}
           >
             {saving ? 'Saving...' : 'Done'}
           </button>
@@ -316,16 +292,11 @@ export default function SetLoggerPage() {
       ) : (
         <div
           className="text-center py-8 rounded-2xl"
-          style={{
-            background: `radial-gradient(ellipse at 50% 0%, ${blockAccent}20 0%, transparent 65%)`,
-          }}
+          style={{ background: `radial-gradient(ellipse at 50% 0%, ${PLAN_ACCENT}20 0%, transparent 65%)` }}
         >
           <p
             className="text-6xl mb-4"
-            style={{
-              color: C.success,
-              animation: 'checkmark-pop 0.45s cubic-bezier(0.34,1.56,0.64,1) both',
-            }}
+            style={{ color: C.success, animation: 'checkmark-pop 0.45s cubic-bezier(0.34,1.56,0.64,1) both' }}
           >
             &#10003;
           </p>
@@ -348,16 +319,14 @@ export default function SetLoggerPage() {
           <p className="text-sm italic mb-8" style={{ color: C.muted }}>{motivation}</p>
 
           <button
-            onClick={() => router.push(`/block/${blockId}`)}
-            className="w-full font-bold text-xl rounded-xl py-5"
-            style={{ border: `1px solid ${blockAccent}`, color: blockAccent, backgroundColor: 'transparent' }}
+            onClick={() => router.push(`/plans/${planId}`)}
+            className="w-full font-bold text-xl rounded-xl py-5 active:opacity-80"
+            style={{ backgroundColor: PLAN_ACCENT, color: C.text }}
           >
-            &lsaquo; Back to block
+            Back to plan
           </button>
         </div>
       )}
-
-      {showNeck && <NeckSafetyModal onClose={() => setShowNeck(false)} />}
 
       {toast && (
         <Toast

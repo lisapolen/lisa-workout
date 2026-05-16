@@ -22,9 +22,25 @@ export interface Session {
   id: number
   date: string
   block_id: number | null
+  plan_id: number | null
   notes: string | null
   feeling: string | null
   created_at: string
+}
+
+export interface Plan {
+  id: number
+  name: string
+  sort_order: number
+  created_at: string
+}
+
+export interface PlanExercise {
+  id: number
+  plan_id: number
+  exercise_id: number
+  sort_order: number
+  exercise?: Exercise
 }
 
 export interface WalkLog {
