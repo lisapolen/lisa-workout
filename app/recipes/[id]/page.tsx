@@ -54,7 +54,7 @@ export default function RecipePage() {
   if (!recipe) return <div className="flex items-center justify-center h-64" style={{ color: C.muted }}>Loading...</div>
 
   return (
-    <div className="px-4 pt-6 pb-36 max-w-lg mx-auto">
+    <div className="px-4 pt-6 pb-28 max-w-lg mx-auto">
       <button onClick={() => router.push('/recipes')} className="text-sm mb-4" style={{ color: C.muted }}>
         &lsaquo; Recipes
       </button>
@@ -63,6 +63,15 @@ export default function RecipePage() {
         {recipe.type === 'circuit' ? `Circuit · ${recipe.rounds} rounds` : 'Straight sets'}
       </p>
       <div className="h-1 w-12 rounded-full mb-6" style={{ backgroundColor: PLAN_ACCENT }} />
+
+      {/* Cook button */}
+      <button
+        onClick={() => router.push(`/recipes/${recipeId}/cook`)}
+        className="w-full py-5 rounded-2xl font-bold text-2xl active:opacity-80 mb-8"
+        style={{ backgroundColor: PLAN_ACCENT, color: C.text }}
+      >
+        Cook &rarr;
+      </button>
 
       {/* Ingredient list — read only */}
       <div className="mb-6">
@@ -77,7 +86,7 @@ export default function RecipePage() {
         ))}
       </div>
 
-      <div className="mt-6 pt-6" style={{ borderTop: `1px solid ${C.border}` }}>
+      <div className="pt-6" style={{ borderTop: `1px solid ${C.border}` }}>
         {confirmDelete ? (
           <div>
             <p className="text-sm mb-3" style={{ color: C.text }}>Delete &ldquo;{recipe.name}&rdquo;? Past cooks are kept.</p>
@@ -91,18 +100,6 @@ export default function RecipePage() {
             Delete recipe
           </button>
         )}
-      </div>
-
-      {/* Sticky Cook button */}
-      <div className="fixed bottom-0 left-0 right-0 px-4 pb-20 pt-3 max-w-lg mx-auto"
-        style={{ backgroundColor: C.bg }}>
-        <button
-          onClick={() => router.push(`/recipes/${recipeId}/cook`)}
-          className="w-full py-5 rounded-2xl font-bold text-2xl active:opacity-80"
-          style={{ backgroundColor: PLAN_ACCENT, color: C.text }}
-        >
-          Cook &rarr;
-        </button>
       </div>
     </div>
   )
