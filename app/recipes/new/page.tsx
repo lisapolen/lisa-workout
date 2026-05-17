@@ -185,18 +185,33 @@ export default function NewRecipePage() {
                     {exercises.map(ex => {
                       const isSelected = selectedIds.has(ex.id)
                       return (
-                        <button key={ex.id} onClick={() => toggleExercise(ex)}
-                          className="flex items-center gap-3 rounded-xl p-3 text-left active:opacity-80"
+                        <div key={ex.id} onClick={() => toggleExercise(ex)}
+                          className="flex items-start gap-3 rounded-xl p-3 text-left active:opacity-80 cursor-pointer"
                           style={{ backgroundColor: isSelected ? `${PLAN_ACCENT}18` : C.bg, border: `1px solid ${isSelected ? PLAN_ACCENT : C.border}` }}>
-                          <span className="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 text-xs font-bold"
+                          <span className="w-5 h-5 mt-0.5 rounded-full border-2 flex items-center justify-center flex-shrink-0 text-xs font-bold"
                             style={{ borderColor: isSelected ? PLAN_ACCENT : C.border, backgroundColor: isSelected ? PLAN_ACCENT : 'transparent', color: C.text }}>
                             {isSelected ? '✓' : ''}
                           </span>
                           <div className="flex-1">
                             <p className="font-semibold text-sm" style={{ color: C.text }}>{ex.name}</p>
                             <p className="text-xs" style={{ color: C.muted }}>{ex.sets}×{ex.reps}{ex.cuisine ? ` · ${ex.cuisine}` : ''}</p>
+                            {ex.description && (
+                              <p className="text-xs mt-1" style={{ color: C.muted }}>{ex.description}</p>
+                            )}
+                            {ex.video_url && (
+                              <a
+                                href={ex.video_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={e => e.stopPropagation()}
+                                className="text-xs font-semibold mt-1 inline-block"
+                                style={{ color: C.accent }}
+                              >
+                                Watch ↗
+                              </a>
+                            )}
                           </div>
-                        </button>
+                        </div>
                       )
                     })}
                   </div>
