@@ -432,6 +432,8 @@ export default function BlockPage() {
         .single()
       if (blockData) setBlock(blockData)
 
+      const today = getLocalDate()
+
       if (blockData?.type === 'strength' || blockData?.type === 'core') {
         const { data: exData } = await supabase
           .from('exercises')
