@@ -412,16 +412,6 @@ function RecoveryView({ blockId }: { blockId: number }) {
   )
 }
 
-// ─── Feeling check-in ─────────────────────────────────────────────────────────
-
-type Feeling = 'great' | 'okay' | 'tired'
-
-const FEELING_OPTIONS: { value: Feeling; label: string; desc: string }[] = [
-  { value: 'great', label: 'Great',  desc: 'Energized and ready' },
-  { value: 'okay',  label: 'Okay',   desc: 'Decent, let\'s go' },
-  { value: 'tired', label: 'Tired',  desc: 'Low energy today' },
-]
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function BlockPage() {
@@ -433,9 +423,6 @@ export default function BlockPage() {
   const [exercises, setExercises] = useState<Exercise[]>([])
   const [lastWeights, setLastWeights] = useState<Record<number, number | null>>({})
   const [completedCounts, setCompletedCounts] = useState<Record<number, number>>({})
-  const [feeling, setFeeling] = useState<Feeling | null>(null)
-  const [feelingCheckedIn, setFeelingCheckedIn] = useState(false)
-
   useEffect(() => {
     async function load() {
       const { data: blockData } = await supabase
@@ -444,14 +431,6 @@ export default function BlockPage() {
         .eq('id', blockId)
         .single()
       if (blockData) setBlock(blockData)
-
-      // Check feeling for today
-      const today = getLocalDate()
-      const storedFeeling = localStorage.getItem(`feeling_${blockId}_${today}`) as Feeling | null
-      if (storedFeeling) {
-        setFeeling(storedFeeling)
-        setFeelingCheckedIn(true)
-      }
 
       if (blockData?.type === 'strength' || blockData?.type === 'core') {
         const { data: exData } = await supabase
@@ -501,20 +480,12 @@ export default function BlockPage() {
     load()
   }, [blockId])
 
-  function selectFeeling(f: Feeling) {
-    const today = getLocalDate()
-    localStorage.setItem(`feeling_${blockId}_${today}`, f)
-    setFeeling(f)
-    setFeelingCheckedIn(true)
-  }
-
   if (!block) {
     return <div className="flex items-center justify-center h-64" style={{ color: C.muted }}>Loading...</div>
   }
 
   const isUpperBody = block.name === 'Upper Body'
   const accent = BLOCK_ACCENT[block.name] ?? C.accent
-  const needsCheckIn = (block.type === 'strength' || block.type === 'core') && !feelingCheckedIn
 
   return (
     <div className="px-4 pt-6 pb-28 max-w-lg mx-auto">
@@ -524,40 +495,18 @@ export default function BlockPage() {
       <h1 className="text-3xl font-bold mb-2" style={{ color: C.text }}>{block.name}</h1>
       <div className="h-1 w-12 rounded-full mb-6" style={{ backgroundColor: accent }} />
 
-      {needsCheckIn ? (
-        <div>
-          <p className="text-lg font-semibold mb-1" style={{ color: C.text }}>How are you feeling?</p>
-          <p className="text-sm mb-6" style={{ color: C.muted }}>Takes a second. Helps the record.</p>
-          <div className="flex flex-col gap-3">
-            {FEELING_OPTIONS.map(({ value, label, desc }) => (
-              <button
-                key={value}
-                onClick={() => selectFeeling(value)}
-                className="w-full rounded-2xl p-5 text-left active:opacity-80"
-                style={{ backgroundColor: C.card, border: `1px solid ${C.border}` }}
-              >
-                <p className="text-xl font-bold" style={{ color: C.text }}>{label}</p>
-                <p className="text-sm" style={{ color: C.muted }}>{desc}</p>
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <>
-          {(block.type === 'strength' || block.type === 'core') && (
-            <StrengthView
-              exercises={exercises}
-              lastWeights={lastWeights}
-              completedCounts={completedCounts}
-              linkBuilder={(exId) => `/block/${blockId}/exercise/${exId}`}
-              isUpperBody={isUpperBody}
-              accent={accent}
-            />
-          )}
-          {block.type === 'cardio' && <CardioView blockId={blockId} />}
-          {block.type === 'recovery' && <RecoveryView blockId={blockId} />}
-        </>
+      {(block.type === 'strength' || block.type === 'core') && (
+        <StrengthView
+          exercises={exercises}
+          lastWeights={lastWeights}
+          completedCounts={completedCounts}
+          linkBuilder={(exId) => `/block/${blockId}/exercise/${exId}`}
+          isUpperBody={isUpperBody}
+          accent={accent}
+        />
       )}
+      {block.type === 'cardio' && <CardioView blockId={blockId} />}
+      {block.type === 'recovery' && <RecoveryView blockId={blockId} />}
     </div>
   )
 }

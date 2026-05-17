@@ -75,6 +75,9 @@ export function StrengthView({
                     )}
                   </div>
                   <p className="text-sm" style={{ color: C.muted }}>{ex.sets} &times; {ex.reps}</p>
+                  {ex.description && (
+                    <p className="text-xs mt-1" style={{ color: C.muted }}>{ex.description}</p>
+                  )}
                 </div>
                 <div className="text-right ml-4 flex flex-col items-end gap-1">
                   {isBodyweight ? (
